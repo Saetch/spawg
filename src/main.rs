@@ -3,7 +3,6 @@ use std::{error::Error};
 use winit::{event_loop::{EventLoop, ControlFlow}, window::WindowBuilder, event::{WindowEvent, KeyboardInput, ElementState, VirtualKeyCode, Event}};
 
 
-//we use the return type Result, so we can use '?' and thus just process Results without having to unwrap or match them
 pub fn main() {
     env_logger::init();     //wgpu logs per default to the env_logger. If we don't initialize it, we only get very basic and not very helpful errors
     let event_loop = EventLoop::new();          //event loop is the basic loop of a window. A window needs one, otherwise it does nothing
@@ -29,7 +28,4 @@ pub fn main() {
         },
         _ => {}
     });
-
-    //return Ok() if the program finished without errors
-    
 }
