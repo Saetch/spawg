@@ -26,6 +26,6 @@ pub fn main() {
                 *control_flow = ControlFlow::Exit ,       //ControlFlow::Exit tells the program to shutdown
             _ => {}                           //every match needs to be exhaustive, so we need to process all cases. We just ignore all others with this line
         },
-        _ => {}
+        _ => {}                        //same as above, we just ignore all other events
     });
 }
