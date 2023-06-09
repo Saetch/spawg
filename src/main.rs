@@ -1,13 +1,25 @@
 use std::{error::Error};
 
+use rendering::{wgpurenderer, init};
 use winit::{event_loop::{EventLoop, ControlFlow}, window::WindowBuilder, event::{WindowEvent, KeyboardInput, ElementState, VirtualKeyCode, Event}};
 
 
-pub fn main() {
+
+mod rendering;
+
+#[tokio::main]
+pub async fn main() {
+
+    
+
     env_logger::init();     //wgpu logs per default to the env_logger. If we don't initialize it, we only get very basic and not very helpful errors
     let event_loop = EventLoop::new();          //event loop is the basic loop of a window. A window needs one, otherwise it does nothing
     let window = WindowBuilder::new().build(&event_loop).unwrap();     //builds a window with the event loop. We could open multiple windows from a single program, but for now we don't need to
-     //control_flow is a variable that can tell the window some special commands, but usually is just used to close the program
+    let renderer = init::new(window).await;
+    
+    
+    /*
+    //control_flow is a variable that can tell the window some special commands, but usually is just used to close the program
     event_loop.run(move |event, _, control_flow| match event {   //<- this match means we can do different things depending on the type of Event
         Event::WindowEvent {           //so here we match it to a WindowEvent, meaning anything that relates to a window
             ref event,   //here we bind the actual type of the Event to the variable 'event', this means that we can use it in the match below, this might be something like Resize or Close etc.    
@@ -27,5 +39,5 @@ pub fn main() {
             _ => {}                           //every match needs to be exhaustive, so we need to process all cases. We just ignore all others with this line
         },
         _ => {}                        //same as above, we just ignore all other events
-    });
+    }); */
 }
