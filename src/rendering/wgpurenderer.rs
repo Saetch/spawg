@@ -1,17 +1,25 @@
-// lib.rs
+use std::sync::atomic::AtomicBool;
+
+use wgpu::util::DeviceExt;
 use winit::{window::Window, event::WindowEvent};
 
-pub struct State {
+use crate::rendering::vertex::Vertex;
+
+#[derive(Debug)]
+#[allow(unused)]
+pub struct Renderer {
     pub(crate) surface: wgpu::Surface,
     pub(crate) device: wgpu::Device,
     pub(crate) queue: wgpu::Queue,
     pub(crate) config: wgpu::SurfaceConfiguration,
     pub(crate) size: winit::dpi::PhysicalSize<u32>,
     pub(crate) window: Window,
+    pub(crate) running: AtomicBool,  //<-- this is used to indicate whether the program should exit or not
+    pub(crate) render_pipeline: wgpu::RenderPipeline,
+
 }
 
-impl State {
-    
+impl Renderer {
 
     pub fn window(&self) -> &Window {
         &self.window
@@ -19,6 +27,7 @@ impl State {
 
 
     //this function is supposed to be used when the window is resized with a resize event and just adapts the configuration and configures the surface
+    #[inline(always)]
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {
             self.size = new_size;
@@ -37,7 +46,17 @@ impl State {
 
     }
 
-    fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+    #[inline(always)]
+    pub(crate) fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+
+
+        const VERTICES: &[Vertex] = &[
+            Vertex { position: [0.0, 0.5, 0.0], color: [1.0, 0.0, 0.0] },
+            Vertex { position: [-0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0] },
+            Vertex { position: [0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0] },
+        ];
+
+
 
         //the surface is the inner part of the window, the output (surfaceTexture) is the actual texture that we will render to
         let output = self.surface.get_current_texture()?;
@@ -49,12 +68,18 @@ impl State {
         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Render Encoder"),
         });
-
+        let vertex_buffer = self.device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Vertex Buffer"),
+                contents: bytemuck::cast_slice(VERTICES),
+                usage: wgpu::BufferUsages::VERTEX,
+            }
+        );
 
         //these {} brackets are used, because begin_render_pass borrows encoder mutably and we need to return that borrow before we can call encoder.finish()
         {
             
-            let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
@@ -71,6 +96,12 @@ impl State {
                 })],
                 depth_stencil_attachment: None,
             });
+
+
+                // NEW!
+            render_pass.set_pipeline(&self.render_pipeline);   //the correct pipeline tells the GPU what shaders will be used on the vertices
+            render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+            render_pass.draw(0..VERTICES.len() as u32, 0..1);
         }
     
         // submit will accept anything that implements IntoIter
