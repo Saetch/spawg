@@ -1,4 +1,4 @@
-use std::sync::atomic::AtomicBool;
+use std::sync::{atomic::AtomicBool, Arc};
 
 use wgpu::{util::DeviceExt, ShaderModule, RenderPipeline, BindGroup};
 use winit::{window::Window, event::WindowEvent};
@@ -14,7 +14,7 @@ pub struct Renderer {
     pub(crate) config: wgpu::SurfaceConfiguration,
     pub(crate) size: winit::dpi::PhysicalSize<u32>,
     pub(crate) window: Window,
-    pub(crate) running: AtomicBool,  //<-- this is used to indicate whether the program should exit or not
+    pub(crate) running: Arc<AtomicBool>,  //<-- this is used to indicate whether the program should exit or not
     pub(crate) shader: ShaderModule,
 }
 

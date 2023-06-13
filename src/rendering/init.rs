@@ -1,4 +1,4 @@
-use std::{sync::atomic::AtomicBool, num::NonZeroU32};
+use std::{sync::{atomic::AtomicBool, Arc}, num::NonZeroU32};
 
 use wgpu::{Queue, Surface, Device, SurfaceConfiguration, RenderPipeline, util::DeviceExt, ShaderModule};
 use winit::{window::{Window, WindowBuilder}, event_loop::{EventLoop, self}, dpi::PhysicalSize};
@@ -6,7 +6,7 @@ use winit::{window::{Window, WindowBuilder}, event_loop::{EventLoop, self}, dpi:
 use super::{wgpurenderer::Renderer, load_sprites::load_sprites, vertex::Vertex};
 
 // Creating some of the wgpu types requires async code
-pub async fn init(running: AtomicBool) -> (Renderer, event_loop::EventLoop<()>) {
+pub async fn init(running: Arc<AtomicBool>) -> (Renderer, event_loop::EventLoop<()>) {
     let event_loop = EventLoop::new();          //event loop is the basic loop of a window. A window needs one, otherwise it does nothing
     let window = WindowBuilder::new().build(&event_loop).unwrap();     //builds a window with the event loop. We could open multiple windows from a single program, but for now we don't need to
 
