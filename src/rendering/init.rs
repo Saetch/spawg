@@ -121,7 +121,7 @@ pub async fn init(running: AtomicBool) -> (Renderer, event_loop::EventLoop<()>) 
             polygon_mode: wgpu::PolygonMode::Fill,
             // Requires Features::DEPTH_CLIP_CONTROL
             unclipped_depth: false,
-            // Requires Features::CONSERVATIVE_RASTERIZATION
+            // Requires Features::CONSERVATIVE_RASTERIZATION   , we may need this later
             conservative: false,
         },
         depth_stencil: None, 
