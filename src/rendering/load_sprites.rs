@@ -3,27 +3,32 @@ use std::{num::NonZeroU32, default};
 use wgpu::{TextureUsages, Device, RenderPipeline, BindGroup, ShaderModule, SurfaceConfiguration};
 
 use crate::rendering::{vertex::Vertex};
+use image::{GenericImageView, ImageBuffer};
 
+use super::wgpurenderer::Renderer;
 
-pub fn load_sprites(_i: u32, device: &Device, queue: &wgpu::Queue, shader: &ShaderModule, config: &SurfaceConfiguration) -> (RenderPipeline, BindGroup) {
+pub fn load_sprites(_i: u32, renderer: &Renderer) -> (RenderPipeline, BindGroup) {
 
             
 
             //loading an image from a file
             let diffuse_bytes = include_bytes!("../../textures/Dwarf_BaseHouse.png");
             let diffuse_image = image::load_from_memory(diffuse_bytes).unwrap();
-            let diffuse_rgba = diffuse_image.to_rgba8();
-    
-            use image::GenericImageView;
-            let dimensions = diffuse_image.dimensions();
-    
+
+            // Crop the image to remove dead spaces
+            let cropped_image = diffuse_image.crop_imm(135,45, 380, 517);   //this crops the image, in this case we just shave off the empty space to the sides etc. This is most likely specific (if needed at all) for every texture
+            let dimensions = cropped_image.dimensions();
+            
+            let diffuse_rgba: ImageBuffer<image::Rgba<u8>, Vec<u8>> = cropped_image.to_rgba8();
+            let diffuse_rgba: Vec<u8> = to_srgba(diffuse_rgba);    //this is necessary for images that are in rgba format, if the image is in srgba format, this should not be done, otherwise the colors will get distorted
+            
             let texture_size = wgpu::Extent3d {
                 width: dimensions.0,
                 height: dimensions.1,
                 depth_or_array_layers: 1,
             };
     
-            let diffuse_texture = device.create_texture(&wgpu::TextureDescriptor {
+            let diffuse_texture = renderer.device.create_texture(&wgpu::TextureDescriptor {
     
                 label: Some("distinct texture"),
                 size: texture_size,
@@ -39,7 +44,7 @@ pub fn load_sprites(_i: u32, device: &Device, queue: &wgpu::Queue, shader: &Shad
     
     
             //this execute a write on the gpu from the loaded image pixel data into our created texture
-            queue.write_texture(
+            renderer.queue.write_texture(
                 // Tells wgpu where to copy the pixel data
                 wgpu::ImageCopyTexture {
                     texture: &diffuse_texture,
@@ -48,7 +53,7 @@ pub fn load_sprites(_i: u32, device: &Device, queue: &wgpu::Queue, shader: &Shad
                     aspect: wgpu::TextureAspect::All,
                 },
                 // The actual pixel data
-                diffuse_rgba.into_raw().as_slice(),
+                diffuse_rgba.as_slice(),
                 // The layout of the texture
                 wgpu::ImageDataLayout {
                     offset: 0,
@@ -251,11 +256,19 @@ pub fn load_sprites(_i: u32, device: &Device, queue: &wgpu::Queue, shader: &Shad
                 //&background1_cracked_no_floor_texture_view, //tex_i index: 3
             ];
 
-
-            
+        
+        let diffuse_sampler = renderer.device.create_sampler(&wgpu::SamplerDescriptor { //a sampler will accept coordinates (X/Y) and return the color data. So this object is asked when the texture is the source of any color operation
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()                        //rest of the fields are initialized with default values
+        });
+        
         //bind groups describe resources that a shaders has access to
-        let texture_bind_group_layout =
-        device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        let texture_bind_group_layout = renderer.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[                     //2 Entries: 1st: Texture, 2nd: Sampler for texture
                 wgpu::BindGroupLayoutEntry {    
                     binding: 0,
@@ -279,19 +292,10 @@ pub fn load_sprites(_i: u32, device: &Device, queue: &wgpu::Queue, shader: &Shad
             label: Some("texture_bind_group_layout"),
         });
 
-        
-        let diffuse_sampler = device.create_sampler(&wgpu::SamplerDescriptor {                                      //a sampler will accept coordinates (X/Y) and return the color data. So this object is asked when the texture is the source of any color operation
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Nearest,
-            mipmap_filter: wgpu::FilterMode::Nearest,
-            ..Default::default()                        //rest of the fields are initialized with default values
-        });
 
-        //create the actual bind group based on the bind-group-layout. This looks almost identical tho, but it means you could switch these out
-        let diffuse_bind_group = device.create_bind_group(
+
+        //create the actual bind group based on the bind-group-layout. This looks almost identical tho, but it means you could switch these out at runtime, go for another bind group and thus change the textures
+        let diffuse_bind_group = renderer.device.create_bind_group(
             &wgpu::BindGroupDescriptor {
                 layout: &texture_bind_group_layout,
                 entries: &[
@@ -310,28 +314,28 @@ pub fn load_sprites(_i: u32, device: &Device, queue: &wgpu::Queue, shader: &Shad
 
         
         let render_pipeline_layout =
-        device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        renderer.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Render Pipeline Layout"),
             bind_group_layouts: &[&texture_bind_group_layout],
             push_constant_ranges: &[],
         });
 
 
-        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        let render_pipeline = renderer.device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render Pipeline"),
             layout: Some(&render_pipeline_layout),
             vertex: wgpu::VertexState {
-                module: shader,
+                module: &renderer.shader,
                 entry_point: "vs_main", // 1.
                 buffers: &[
                     Vertex::desc(),                                 //insert the vertex buffer that was created above
                 ], // 2.
             },
             fragment: Some(wgpu::FragmentState { // 3.              //fragment is optional and thus wrapped in Some(), this is needed for storing color on the surface
-                module: shader,
+                module: &renderer.shader,
                 entry_point: "fs_main",
                 targets: &[Some(wgpu::ColorTargetState { // 4.
-                    format: config.format,
+                    format: renderer.config.format,
                     blend: Some(wgpu::BlendState::ALPHA_BLENDING),         //replace pixels instead of blending
                     write_mask: wgpu::ColorWrites::ALL,             //specify color channels (R, G, B or similiar) that can be written to. Others will be ignored 
                 })],
@@ -357,4 +361,34 @@ pub fn load_sprites(_i: u32, device: &Device, queue: &wgpu::Queue, shader: &Shad
         });
 
         (render_pipeline, diffuse_bind_group)
+}
+
+
+
+
+
+
+
+//convert the given image buffer from rgba into srgba
+fn to_srgba(image: ImageBuffer<image::Rgba<u8>, Vec<u8>>) -> Vec<u8> {
+    image.chunks_exact(4)
+    .flat_map(|rgba| {
+        let r = rgba[0] as f32 / 255.0;
+        let g = rgba[1] as f32 / 255.0;
+        let b = rgba[2] as f32 / 255.0;
+        let a = rgba[3] as f32 / 255.0;
+
+        // Apply gamma correction (from linear RGB to sRGB)
+        let r_gamma = r.powf(2.2);
+        let g_gamma = g.powf(2.2);
+        let b_gamma = b.powf(2.2);
+
+        let r_gamma_u8 = (r_gamma * 255.0) as u8;
+        let g_gamma_u8 = (g_gamma * 255.0) as u8;
+        let b_gamma_u8 = (b_gamma * 255.0) as u8;
+        let a_u8 = (a * 255.0) as u8;
+
+        vec![r_gamma_u8, g_gamma_u8, b_gamma_u8, a_u8]
+    })
+    .collect()
 }

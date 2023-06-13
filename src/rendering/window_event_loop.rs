@@ -2,7 +2,7 @@ use std::sync::atomic::AtomicBool;
 
 use winit::{event::{Event, WindowEvent}, event_loop::{ControlFlow, EventLoop}};
 
-use super::{init::init, wgpurenderer::Renderer};
+use super::{init::init, wgpurenderer::Renderer, load_sprites::load_sprites};
 
 impl Renderer {
 
@@ -12,9 +12,13 @@ impl Renderer {
     pub(crate) async fn run(running: AtomicBool) {
 
 
-        //this is the most important struct for the current state. Almost all infos are grouped here.
-        let (mut renderer, event_loop) = init(running).await;
+        //this is the most important struct for the current state. Almost all infos are grouped here
+        let (mut renderer, event_loop) = init(running).await;  //we cannot put the event_loop into the Renderer struct, as the .run() function requires a move, which takes ownership of the values in it. And it is not possible for a data field to take ownership of the struct it is in
         
+
+        #[allow(unused)]
+        let (mut render_pipeline, mut bind_group) = load_sprites(0, &renderer);
+
 
 
         event_loop.run(move |event, _, control_flow| match event {
@@ -85,7 +89,10 @@ impl Renderer {
     
         }
         Event::MainEventsCleared => {
-            renderer.render();
+            let res = renderer.render(&render_pipeline, &bind_group);
+            if let Err(e) = res {
+                eprintln!("Error during rendering: {:?}", e);
+            }
         }
             _ => {}
         });
