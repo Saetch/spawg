@@ -68,27 +68,57 @@ impl Renderer {
                 //send necessary inputs to the controller thread for further evaluation
                WindowEvent::KeyboardInput { device_id: _ , input, is_synthetic: _ }
                  => {
-                    controller_sender.send(ControllerInput::KeyboardInput { key: input.virtual_keycode, state : input.state }).expect("Could not send keyboard input details to controller thread!");
+                    let ret = controller_sender.send(ControllerInput::KeyboardInput { key: input.virtual_keycode, state : input.state });
+                    if ret.is_err(){
+                        if renderer.running.load(std::sync::atomic::Ordering::SeqCst) {
+                            println!("Could not send keyboard input details to controller thread!");
+                        }
+                    }
                 }
                 WindowEvent::MouseInput { device_id: _, state , button: btn, .. }
                  => {
-                    controller_sender.send(ControllerInput::MouseInput { action: MouseInputType::Click { button: *btn, state: *state } }).expect("Could not send mouse click input details to controller thread!");
+                    let ret = controller_sender.send(ControllerInput::MouseInput { action: MouseInputType::Click { button: *btn, state: *state } });
+                    if ret.is_err(){
+                        if renderer.running.load(std::sync::atomic::Ordering::SeqCst) {
+                            println!("Could not send mouse input details to controller thread!");
+                        }
+                    }
                 }
                 WindowEvent::CursorLeft { device_id: _ }
                  => {
-                    controller_sender.send( ControllerInput::MouseInput { action: MouseInputType::LeftWindow }).expect("Could not send cursor left info to controller thread");
+                    let ret = controller_sender.send( ControllerInput::MouseInput { action: MouseInputType::LeftWindow });
+                    if ret.is_err(){
+                        if renderer.running.load(std::sync::atomic::Ordering::SeqCst) {
+                            println!("Could not send cursor left info to controller thread!");
+                        }
+                    }
                 }
                 WindowEvent::CursorEntered { device_id: _ }
                  => {
-                    controller_sender.send( ControllerInput::MouseInput { action: MouseInputType::EnteredWindow }).expect("Could not send cursor entered info to controller thread");
+                    let ret = controller_sender.send( ControllerInput::MouseInput { action: MouseInputType::EnteredWindow });
+                    if ret.is_err(){
+                        if renderer.running.load(std::sync::atomic::Ordering::SeqCst) {
+                            println!("Could not send cursor entered info to controller thread!");
+                        }
+                    }
                 }
                 WindowEvent::CursorMoved { device_id: _, position, .. }
                  => {
-                    controller_sender.send( ControllerInput::MouseInput { action: MouseInputType::Move(position.x as f32, position.y as f32) }).expect("Could not send mouse moved input details to controller thread");
+                    let ret = controller_sender.send( ControllerInput::MouseInput { action: MouseInputType::Move(position.x as f32, position.y as f32) });
+                    if ret.is_err(){
+                        if renderer.running.load(std::sync::atomic::Ordering::SeqCst) {
+                            println!("Could not send cursor moved info to controller thread!");
+                        }
+                    }
                 }
                 WindowEvent::MouseWheel { device_id: _, delta, phase , ..}
                  => {
-                    controller_sender.send( ControllerInput::MouseInput { action: MouseInputType::Scroll { delta: *delta, phase: *phase } }).expect("Could not send mouse wheel input details to controller thread");
+                    let ret = controller_sender.send( ControllerInput::MouseInput { action: MouseInputType::Scroll { delta: *delta, phase: *phase } });
+                    if ret.is_err(){
+                        if renderer.running.load(std::sync::atomic::Ordering::SeqCst) {
+                            println!("Could not send mouse wheel info to controller thread!");
+                        }
+                    }
                 }
                 _ => {}
             }
