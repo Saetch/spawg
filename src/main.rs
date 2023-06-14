@@ -1,5 +1,6 @@
 use std::{sync::{atomic::AtomicBool, Arc}, thread};
 
+use controller::controller::Controller;
 use model::model::Model;
 
 use crate::rendering::wgpurenderer::Renderer;
@@ -28,6 +29,7 @@ pub async fn main() {
     let model_thread = thread::spawn(move || { 
         model.run();
     });
+    let mut controller = Controller::new(controller_receiver);
     join_handles_vec.push(model_thread);
 
 

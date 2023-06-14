@@ -2,6 +2,8 @@ use std::{sync::{atomic::AtomicBool, Arc}, thread::JoinHandle};
 
 use winit::{event::{Event, WindowEvent}, event_loop::{ControlFlow}};
 
+use crate::controller::input::{ControllerInput, MouseInputType};
+
 use super::{init::init, wgpurenderer::Renderer, load_sprites::load_sprites};
 
 impl Renderer {
@@ -9,7 +11,7 @@ impl Renderer {
     //this is the main loop of the program, it will be called from main.rs
     //this whole file is only for putting the event loop and window handling in one easy to use place
     #[inline(always)]
-    pub(crate) async fn run(running: Arc<AtomicBool>, mut join_handles: Vec<JoinHandle<()>>, controller_sender: flume::Sender<>) {
+    pub(crate) async fn run(running: Arc<AtomicBool>, mut join_handles: Vec<JoinHandle<()>>, controller_sender: flume::Sender<ControllerInput>) {
 
 
         //this is the most important struct for the current state. Almost all infos are grouped here
@@ -53,7 +55,7 @@ impl Renderer {
                 WindowEvent::CloseRequested
                  => {
                     renderer.running.store(false, std::sync::atomic::Ordering::SeqCst);
-
+                    controller_sender.send(ControllerInput::Exit).expect("Could not send exit info to controller thread!");
                     //now we wait for the other threads to finish, before we finally close the program completely we cannot just use for handles in join_handles, because they would still exist, but be captured by the move closure, which would be a problem
                     join_handles.drain(..).for_each(|join_handle| {
                         join_handle.join().unwrap();
@@ -63,30 +65,30 @@ impl Renderer {
                     *control_flow = ControlFlow::Exit;
 
                 }
+                //send necessary inputs to the controller thread for further evaluation
                WindowEvent::KeyboardInput { device_id: _ , input, is_synthetic: _ }
                  => {
-                    controller_sender.send(event);    //this is how we send a message to the controller
-                
-            }
+                    controller_sender.send(ControllerInput::KeyboardInput { key: input.virtual_keycode, state : input.state }).expect("Could not send keyboard input details to controller thread!");
+                }
                 WindowEvent::MouseInput { device_id: _, state , button: btn, .. }
                  => {
-
+                    controller_sender.send(ControllerInput::MouseInput { action: MouseInputType::Click { button: *btn, state: *state } }).expect("Could not send mouse click input details to controller thread!");
                 }
                 WindowEvent::CursorLeft { device_id: _ }
                  => {
-
+                    controller_sender.send( ControllerInput::MouseInput { action: MouseInputType::LeftWindow }).expect("Could not send cursor left info to controller thread");
                 }
                 WindowEvent::CursorEntered { device_id: _ }
                  => {
-
+                    controller_sender.send( ControllerInput::MouseInput { action: MouseInputType::EnteredWindow }).expect("Could not send cursor entered info to controller thread");
                 }
                 WindowEvent::CursorMoved { device_id: _, position, .. }
                  => {
-
+                    controller_sender.send( ControllerInput::MouseInput { action: MouseInputType::Move(position.x as f32, position.y as f32) }).expect("Could not send mouse moved input details to controller thread");
                 }
                 WindowEvent::MouseWheel { device_id: _, delta, phase , ..}
                  => {
-
+                    controller_sender.send( ControllerInput::MouseInput { action: MouseInputType::Scroll { delta: *delta, phase: *phase } }).expect("Could not send mouse wheel input details to controller thread");
                 }
                 _ => {}
             }

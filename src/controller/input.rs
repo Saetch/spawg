@@ -5,6 +5,7 @@ pub enum ControllerInput{
     MouseInput{  action: MouseInputType},
     KeyboardInput{ key: Option<VirtualKeyCode>, state : ElementState },  
     WindowResized{ dimensions : (u32,u32) },
+    Exit
 }
 
 #[derive(Clone, Copy)]
