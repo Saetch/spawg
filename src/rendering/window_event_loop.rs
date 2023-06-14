@@ -9,7 +9,7 @@ impl Renderer {
     //this is the main loop of the program, it will be called from main.rs
     //this whole file is only for putting the event loop and window handling in one easy to use place
     #[inline(always)]
-    pub(crate) async fn run(running: Arc<AtomicBool>, mut join_handles: Vec<JoinHandle<()>>) {
+    pub(crate) async fn run(running: Arc<AtomicBool>, mut join_handles: Vec<JoinHandle<()>>, controller_sender: flume::Sender<>) {
 
 
         //this is the most important struct for the current state. Almost all infos are grouped here
@@ -65,7 +65,7 @@ impl Renderer {
                 }
                WindowEvent::KeyboardInput { device_id: _ , input, is_synthetic: _ }
                  => {
-
+                    controller_sender.send(event);    //this is how we send a message to the controller
                 
             }
                 WindowEvent::MouseInput { device_id: _, state , button: btn, .. }

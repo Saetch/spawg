@@ -8,13 +8,14 @@ use crate::rendering::wgpurenderer::Renderer;
 mod game_objects;
 mod rendering;
 mod model;
-
+mod controller;
 
 #[tokio::main]
 pub async fn main() {
 
     env_logger::init();     //wgpu logs per default to the env_logger. If we don't initialize it, we only get very basic and not very helpful errors
-    
+
+    let (controller_sender, controller_receiver) = flume::unbounded();  //this channel is used to send messages from the event loop to the controller 
 
     let mut join_handles_vec = Vec::new();     //this vector will be used to store all the join handles of the threads that are spawned
 
@@ -32,5 +33,5 @@ pub async fn main() {
 
 
 
-    Renderer::run(running, join_handles_vec).await;
+    Renderer::run(running, join_handles_vec, controller_sender).await;
 }
