@@ -4,18 +4,18 @@ use winit::{event::{Event, WindowEvent}, event_loop::{ControlFlow}};
 
 use crate::controller::input::{ControllerInput, MouseInputType};
 
-use super::{init::init, wgpurenderer::Renderer, load_sprites::load_sprites};
+use super::{init::init, wgpurenderer::{Renderer, DummyPosition}, load_sprites::load_sprites};
 
 impl Renderer {
 
     //this is the main loop of the program, it will be called from main.rs
     //this whole file is only for putting the event loop and window handling in one easy to use place
     #[inline(always)]
-    pub(crate) async fn run(running: Arc<AtomicBool>, mut join_handles: Vec<JoinHandle<()>>, controller_sender: flume::Sender<ControllerInput>) {
+    pub(crate) async fn run(running: Arc<AtomicBool>, mut join_handles: Vec<JoinHandle<()>>, controller_sender: flume::Sender<ControllerInput>, cam_pos: DummyPosition) {
 
 
         //this is the most important struct for the current state. Almost all infos are grouped here
-        let (mut renderer, event_loop) = init(running).await;  //we cannot put the event_loop into the Renderer struct, as the .run() function requires a move, which takes ownership of the values in it. And it is not possible for a data field to take ownership of the struct it is in
+        let (mut renderer, event_loop) = init(running, cam_pos).await;  //we cannot put the event_loop into the Renderer struct, as the .run() function requires a move, which takes ownership of the values in it. And it is not possible for a data field to take ownership of the struct it is in
         
 
         #[allow(unused)]

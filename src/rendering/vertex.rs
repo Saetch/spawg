@@ -4,7 +4,8 @@
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vertex {
     pub position: [f32; 3],
-    pub tex_coords: [f32; 2], // NEW!
+    pub tex_coords: [f32; 2],
+    pub texture_id: u32,
 }
 
 
@@ -23,6 +24,11 @@ impl Vertex {
                     offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
                     shader_location: 1,
                     format: wgpu::VertexFormat::Float32x2,
+                },
+                wgpu::VertexAttribute {
+                    offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress + std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
+                    shader_location: 2,
+                    format: wgpu::VertexFormat::Uint32,
                 }
             ]
         }

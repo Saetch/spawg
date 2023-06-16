@@ -1,4 +1,4 @@
-use std::sync::{atomic::AtomicBool, Arc};
+use std::sync::{atomic::AtomicBool, Arc, RwLock};
 
 use wgpu::{util::DeviceExt, ShaderModule, RenderPipeline, BindGroup};
 use winit::{window::Window, event::WindowEvent};
@@ -16,6 +16,13 @@ pub struct Renderer {
     pub(crate) window: Window,
     pub(crate) running: Arc<AtomicBool>,  //<-- this is used to indicate whether the program should exit or not
     pub(crate) shader: ShaderModule,
+    pub(crate) cam_pos: DummyPosition,
+}
+
+#[derive(Debug)]
+pub struct DummyPosition {
+    pub(crate) x: Arc<RwLock<f32>>,
+    pub(crate) y: Arc<RwLock<f32>>,
 }
 
 impl Renderer {
@@ -49,11 +56,11 @@ impl Renderer {
     pub(crate) fn render(&mut self, render_pipeline: &RenderPipeline, bind_group: &BindGroup) -> Result<(), wgpu::SurfaceError> {
 
 
-        const VERTICES: &[Vertex] = &[
-            Vertex { position: [1.0, 0.0, 0.0], tex_coords: [1.0, 1.0] }, // A
-            Vertex { position: [1.0, 1.0, 0.0], tex_coords: [1.0, 0.0] }, // B
-            Vertex { position: [0.0, 1.0, 0.0], tex_coords: [0.0, 0.0] }, // C
-            Vertex { position: [0.0, 0.0, 0.0], tex_coords: [0.0, 1.0] }, // D
+        let mut vertices: &[Vertex] = &[
+            Vertex { position: [1.0, 0.0, 0.0], tex_coords: [1.0, 1.0], texture_id: 0 }, // A
+            Vertex { position: [1.0, 1.0, 0.0], tex_coords: [1.0, 0.0], texture_id: 0 }, // B
+            Vertex { position: [0.0, 1.0, 0.0], tex_coords: [0.0, 0.0], texture_id: 0 }, // C
+            Vertex { position: [0.0, 0.0, 0.0], tex_coords: [0.0, 1.0], texture_id: 0 }, // D
         ];
 
 
@@ -80,7 +87,7 @@ impl Renderer {
         let vertex_buffer = self.device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: Some("Vertex Buffer"),
-                contents: bytemuck::cast_slice(VERTICES),
+                contents: bytemuck::cast_slice(vertices),
                 usage: wgpu::BufferUsages::VERTEX,
             }
         );

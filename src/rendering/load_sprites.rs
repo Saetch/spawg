@@ -65,7 +65,63 @@ pub fn load_sprites(_i: u32, renderer: &Renderer) -> (RenderPipeline, BindGroup)
             // We don't need to configure the texture view much, so let's
             // let wgpu define it.
             let dwarf_base_house_texture_view = diffuse_texture.create_view(&wgpu::TextureViewDescriptor::default());        //create a handle to access the texture we just created
-        
+            
+
+                        //loading an image from a file
+                        let diffuse_bytes = include_bytes!("../../textures/Dwarf_BaseHouse_px9.png");
+                        let diffuse_image = image::load_from_memory(diffuse_bytes).unwrap();
+            
+                        // Crop the image to remove dead spaces
+                        let cropped_image = diffuse_image.crop_imm(135,45, 380, 517);   //this crops the image, in this case we just shave off the empty space to the sides etc. This is most likely specific (if needed at all) for every texture
+                        let dimensions = cropped_image.dimensions();
+                        
+                        let diffuse_rgba: ImageBuffer<image::Rgba<u8>, Vec<u8>> = cropped_image.to_rgba8();
+                        let diffuse_rgba: Vec<u8> = to_srgba(diffuse_rgba);    //this is necessary for images that are in rgba format, if the image is in srgba format, this should not be done, otherwise the colors will get distorted
+                        
+                        let texture_size = wgpu::Extent3d {
+                            width: dimensions.0,
+                            height: dimensions.1,
+                            depth_or_array_layers: 1,
+                        };
+                
+                        let diffuse_texture = renderer.device.create_texture(&wgpu::TextureDescriptor {
+                
+                            label: Some("distinct texture"),
+                            size: texture_size,
+                            mip_level_count: 1,
+                            sample_count: 1,
+                            dimension: wgpu::TextureDimension::D2,
+                            format: wgpu::TextureFormat::Rgba8Unorm,
+                            usage: TextureUsages::COPY_DST | TextureUsages::COPY_SRC | TextureUsages::TEXTURE_BINDING,
+                            view_formats: &[],  //Default, RGBA8Unorm is always supported
+                        
+                            
+                        });
+                
+                
+                        //this execute a write on the gpu from the loaded image pixel data into our created texture
+                        renderer.queue.write_texture(
+                            // Tells wgpu where to copy the pixel data
+                            wgpu::ImageCopyTexture {
+                                texture: &diffuse_texture,
+                                mip_level: 0,
+                                origin: wgpu::Origin3d::ZERO,
+                                aspect: wgpu::TextureAspect::All,
+                            },
+                            // The actual pixel data
+                            diffuse_rgba.as_slice(),
+                            // The layout of the texture
+                            wgpu::ImageDataLayout {
+                                offset: 0,
+                                bytes_per_row: Some(4 * dimensions.0),
+                                rows_per_image: Some(dimensions.1),
+                            },
+                            texture_size,
+                        );
+                        // We don't need to configure the texture view much, so let's
+                        // let wgpu define it.
+                        let dwarf_base_house_texture_view2 = diffuse_texture.create_view(&wgpu::TextureViewDescriptor::default());   
+
     /*      This is another way to load an image, but it is not as easy to use as the one above (not as flexible), tho more slim
         
             let diffuse_texture = {
@@ -109,6 +165,7 @@ pub fn load_sprites(_i: u32, renderer: &Renderer) -> (RenderPipeline, BindGroup)
                     
             let texture_view_array = [
                 &dwarf_base_house_texture_view,             //tex_i index: 0 
+                &dwarf_base_house_texture_view2,
                 //&rust_logo_diffuse_texture_view,            //tex_i index: 1
                 //&background1_cracked_floor_texture_view,    //tex_i index: 2    
                 //&background1_cracked_no_floor_texture_view, //tex_i index: 3
