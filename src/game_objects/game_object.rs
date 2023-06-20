@@ -17,7 +17,7 @@ pub(crate) trait DrawableObject{
      * Default implementation for a somewhat rectangle-shaped object
      */
     #[inline(always)]
-    fn construct_vertices(&self, camera_position: (f32, f32), window_dimensions_ingame: (f64, f64)) -> [Vertex; 6]{
+    fn construct_vertices(&self, camera_position: (f32, f32), window_dimensions_ingame: (f64, f64)) -> Vec<Vertex>{
         let x = (( self.get_position().0 - camera_position.0 ) as f32) /window_dimensions_ingame.0 as f32;
         let y = (( self.get_position().1 - camera_position.1 ) as f32) /window_dimensions_ingame.1 as f32;
         let size_x = self.get_size() / (window_dimensions_ingame.0 as f32);
@@ -26,7 +26,7 @@ pub(crate) trait DrawableObject{
         //in wgpu: -1 bottom, 1 top, so this needs to be switched around, since in the game logic, a higher y is lower on the screen, just like actual screen coordinates. I don't know why wgpu is doing this, but they want to be an actual math graph.
         let pre_set: f32 = -1.0;
         //in wgpu, the vertex faces need to be specified in counter-clockwise order
-        [
+        vec!(
             Vertex{         //TOP RIGHT CORNER
                 position: [x+size_x, pre_set* (y-size_y)],
                 texture_id: tex_i,
@@ -42,17 +42,6 @@ pub(crate) trait DrawableObject{
                 texture_id: tex_i,
                 tex_coords: self.bottom_left_coords(),
             },
-
-            Vertex{         //TOP RIGHT CORNER
-                position: [x+size_x, pre_set* (y-size_y)],
-                texture_id: tex_i,
-                tex_coords: self.top_right_coords(),
-            },            
-            Vertex{         //BOTTOM LEFT CORNER
-                position: [x-size_x, pre_set* (y+size_y)],
-                texture_id: tex_i,
-                tex_coords: self.bottom_left_coords(),
-            },
             Vertex{         //BOTTOM RIGHT CORNER
                  position: [x+size_x, pre_set* (y+size_y)],
                  texture_id: tex_i,
@@ -60,7 +49,7 @@ pub(crate) trait DrawableObject{
              },
 
             
-        ]
+        )
     }
 
 
