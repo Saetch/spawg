@@ -14,18 +14,29 @@ impl Model{
     }
 
 
+    
+
+
     pub(crate) fn run(&mut self){
 
 
         while self.running.load(Ordering::Relaxed){
             //do stuff
+            self.compute_logic_objects();
             //sleep 1 second
             std::thread::sleep(Duration::from_secs(1));
-            println!("Model thread slept 1 second!");
         }   
 
 
 
         println!("Model thread exited");
+    }
+
+
+
+
+    #[inline(always)]
+    fn compute_logic_objects(&mut self){
+        println!("Model thread computing logic objects");
     }
 }
