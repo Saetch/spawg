@@ -23,7 +23,7 @@ pub fn load_sprites(_i: u32, renderer: &Renderer) -> (RenderPipeline, BindGroup)
         let mut texture_view_array = Vec::new();
         texture_view_array.push(&dwarf_base_house_texture_view);
         texture_view_array.push(&dwarf_base_house_texture_view2);
-
+        texture_view_array.push(&black_pixel_texture_view);
 
         
         let diffuse_sampler = renderer.device.create_sampler(&wgpu::SamplerDescriptor { //a sampler will accept coordinates (X/Y) and return the color data. So this object is asked when the texture is the source of any color operation
