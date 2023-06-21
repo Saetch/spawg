@@ -1,2 +1,2 @@
-mod game_object;
-mod static_object;
+pub mod game_object;
+pub mod static_object;

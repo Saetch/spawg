@@ -1,7 +1,18 @@
 use std::{sync::{atomic::{AtomicBool, Ordering}, Arc}, os::windows::thread, time::Duration};
+use tokio::sync::RwLock as AsyncRwLock;
+
+use crate::game_objects::{game_object::DrawableObject, static_object::StaticObject};
+
+
+//these types are just shorthand for the long type names, making it more easy to assess them
+pub(crate) type GameObjectList = Arc<AsyncRwLock<Vec<Box<dyn DrawableObject + Send + Sync>>>>;
+pub(crate) type StaticObjectList = Arc<AsyncRwLock<Vec<StaticObject>>>;
+
 
 pub(crate) struct Model{
     pub(crate) running: Arc<AtomicBool>,  //<-- this is used to indicate whether the program should exit or not
+    pub game_objects: GameObjectList,
+    pub static_objects: StaticObjectList,
 }
 
 
@@ -10,6 +21,8 @@ impl Model{
     pub(crate) fn new(running:Arc< AtomicBool>) -> Self{
         Self{
             running: running,
+            game_objects: Arc::new(AsyncRwLock::new(Vec::new())),
+            static_objects: Arc::new(AsyncRwLock::new(Vec::new())),
         }
     }
 
