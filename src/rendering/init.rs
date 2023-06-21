@@ -101,6 +101,8 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: DummyPosition) -> (Ren
         running,
         shader,
         cam_pos:  cam_position,
+        instances: None, 
+        instance_buffer: None
     },
     event_loop
     )

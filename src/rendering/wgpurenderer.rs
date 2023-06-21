@@ -5,6 +5,8 @@ use winit::{window::Window, event::WindowEvent};
 
 use crate::rendering::vertex::Vertex;
 
+use super::sprite_instance::SpriteInstance;
+
 #[derive(Debug)]
 #[allow(unused)]
 pub struct Renderer {
@@ -17,6 +19,9 @@ pub struct Renderer {
     pub(crate) running: Arc<AtomicBool>,  //<-- this is used to indicate whether the program should exit or not
     pub(crate) shader: ShaderModule,
     pub(crate) cam_pos: DummyPosition,
+    pub(crate) instances: Option<Vec<SpriteInstance>>,
+    pub(crate) instance_buffer: Option<wgpu::Buffer>,
+
 }
 
 #[derive(Debug)]
