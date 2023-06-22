@@ -4,7 +4,7 @@ use winit::{event::{Event, WindowEvent}, event_loop::{ControlFlow}};
 
 use crate::controller::input::{ControllerInput, MouseInputType};
 
-use super::{init::init, wgpurenderer::{Renderer, DummyPosition}, load_sprites::load_sprites};
+use super::{init::init, wgpurenderer::{Renderer, DummyPosition}, sprites::load_sprites::load_sprites};
 
 impl Renderer {
 

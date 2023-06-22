@@ -2,20 +2,19 @@ use std::{num::NonZeroU32, default};
 
 use wgpu::{TextureUsages, Device, RenderPipeline, BindGroup, ShaderModule, SurfaceConfiguration, TextureView};
 
-use crate::rendering::{vertex::Vertex};
+use crate::rendering::{vertex::Vertex, wgpurenderer::Renderer};
 use image::{GenericImageView, ImageBuffer};
 
-use super::wgpurenderer::Renderer;
 
 pub fn load_sprites(_i: u32, renderer: &Renderer) -> (RenderPipeline, BindGroup) {
             
 
         //consider moving these to a file to specify which textures to load and where to load them from, based on the level selected
-        let diffuse_bytes = include_bytes!("../../textures/Dwarf_BaseHouse.png");
+        let diffuse_bytes = include_bytes!("../../../textures/Dwarf_BaseHouse.png");
         let dwarf_base_house_texture_view = load_sprite_from_memory(&diffuse_bytes.as_slice(), 135,45, 380, 517,  renderer);
-        let diffuse_bytes = include_bytes!("../../textures/Dwarf_BaseHouse_px9.png");
+        let diffuse_bytes = include_bytes!("../../../textures/Dwarf_BaseHouse_px9.png");
         let dwarf_base_house_texture_view2 = load_sprite_from_memory(&diffuse_bytes.as_slice(), 135,45, 380, 517, renderer);
-        let diffuse_bytes = include_bytes!("../../textures/black_pixel.png");
+        let diffuse_bytes = include_bytes!("../../../textures/black_pixel.png");
         let black_pixel_texture_view = load_sprite_from_memory_uncropped(&diffuse_bytes.as_slice(), renderer);
 
 

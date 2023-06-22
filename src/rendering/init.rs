@@ -3,7 +3,7 @@ use std::{sync::{atomic::AtomicBool, Arc}, num::NonZeroU32};
 use wgpu::{Queue, Surface, Device, SurfaceConfiguration, RenderPipeline, util::DeviceExt, ShaderModule};
 use winit::{window::{Window, WindowBuilder}, event_loop::{EventLoop, self}, dpi::PhysicalSize};
 
-use super::{wgpurenderer::{Renderer, DummyPosition}, load_sprites::load_sprites, vertex::Vertex};
+use super::{wgpurenderer::{Renderer, DummyPosition}, vertex::Vertex};
 
 // Creating some of the wgpu types requires async code
 pub async fn init(running: Arc<AtomicBool>, cam_position: DummyPosition) -> (Renderer, event_loop::EventLoop<()>) {
