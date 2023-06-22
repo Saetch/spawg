@@ -19,7 +19,7 @@ pub struct Renderer {
     pub(crate) running: Arc<AtomicBool>,  //<-- this is used to indicate whether the program should exit or not
     pub(crate) shader: ShaderModule,
     pub(crate) cam_pos: DummyPosition,
-    pub(crate) instances: Option<Vec<SpriteInstance>>,
+    pub(crate) instances: Vec<SpriteInstance>,
     pub(crate) instance_buffer: Option<wgpu::Buffer>,
 
 }
@@ -31,6 +31,29 @@ pub struct DummyPosition {
 }
 
 impl Renderer {
+
+    pub fn instance(&mut self){
+        const NUM_INSTANCES_PER_ROW: u32 = 2;
+
+
+        for i in 0..NUM_INSTANCES_PER_ROW {
+            for j in 0..NUM_INSTANCES_PER_ROW {
+                let instance = SpriteInstance {
+                    position: [i as f32, j as f32],
+                    texture_id: 0,
+                };
+                self.instances.push(instance);
+            }
+        } 
+
+        let instance_buffer = self.device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Instance Buffer"),
+                contents: bytemuck::cast_slice(self.instances.as_slice()),
+                usage: wgpu::BufferUsages::VERTEX,
+    }
+);
+    }
 
     pub fn window(&self) -> &Window {
         &self.window
@@ -61,7 +84,9 @@ impl Renderer {
     pub(crate) fn render(&mut self, render_pipeline: &RenderPipeline, bind_group: &BindGroup) -> Result<(), wgpu::SurfaceError> {
 
 
-        let mut vertices: &[Vertex] = &[
+
+
+        let vertices: &[Vertex] = &[
             Vertex { position: [1.0, 0.0], tex_coords: [1.0, 1.0], texture_id: 0 }, // A
             Vertex { position: [1.0, 1.0], tex_coords: [1.0, 0.0], texture_id: 0 }, // B
             Vertex { position: [0.0, 1.0], tex_coords: [0.0, 0.0], texture_id: 0 }, // C
@@ -131,6 +156,7 @@ impl Renderer {
             render_pass.set_pipeline(&render_pipeline);   //the correct pipeline tells the GPU what shaders will be used on the vertices
             render_pass.set_bind_group(0, bind_group, &[]);  //this bind group contains the textures we loaded, if we want to switch all of the textures at once, we can do that by switching to another bind group. Might create some interesting effects
             render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+            //render_pass.set_vertex_buffer(1, self.instance_buffer.as_ref().unwrap().slice(..));
             render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..num_indices, 0, 0..1);
         }

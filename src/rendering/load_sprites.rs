@@ -11,12 +11,12 @@ pub fn load_sprites(_i: u32, renderer: &Renderer) -> (RenderPipeline, BindGroup)
             
 
         //consider moving these to a file to specify which textures to load and where to load them from, based on the level selected
-        let diffuse_bytes = std::fs::read("./textures/Dwarf_BaseHouse.png").expect("Failed to read texture file");
-        let dwarf_base_house_texture_view = load_sprite_from_memory(&diffuse_bytes, 135,45, 380, 517,  renderer);
-        let diffuse_bytes = std::fs::read("./textures/Dwarf_BaseHouse_px9.png").expect("Failed to read texture file");
-        let dwarf_base_house_texture_view2 = load_sprite_from_memory(&diffuse_bytes, 135,45, 380, 517, renderer);
-        let diffuse_bytes = std::fs::read("./textures/black_pixel.png").expect("Failed to read texture file");
-        let black_pixel_texture_view = load_sprite_from_memory_uncropped(&diffuse_bytes, renderer);
+        let diffuse_bytes = include_bytes!("../../textures/Dwarf_BaseHouse.png");
+        let dwarf_base_house_texture_view = load_sprite_from_memory(&diffuse_bytes.as_slice(), 135,45, 380, 517,  renderer);
+        let diffuse_bytes = include_bytes!("../../textures/Dwarf_BaseHouse_px9.png");
+        let dwarf_base_house_texture_view2 = load_sprite_from_memory(&diffuse_bytes.as_slice(), 135,45, 380, 517, renderer);
+        let diffuse_bytes = include_bytes!("../../textures/black_pixel.png");
+        let black_pixel_texture_view = load_sprite_from_memory_uncropped(&diffuse_bytes.as_slice(), renderer);
 
 
             
