@@ -1,4 +1,4 @@
-use std::{sync::{atomic::AtomicBool, Arc, RwLock}, thread};
+use std::{sync::{atomic::AtomicBool, Arc, RwLock}, thread, time::{Duration, SystemTime}};
 
 use controller::{controller::Controller, position::Position};
 use model::model::Model;
@@ -11,7 +11,7 @@ mod rendering;
 mod model;
 mod controller;
 
-#[tokio::main]
+#[async_std::main]
 pub async fn main() {
 
     env_logger::init();     //wgpu logs per default to the env_logger. If we don't initialize it, we only get very basic and not very helpful errors
@@ -26,6 +26,12 @@ pub async fn main() {
 
     //spawn the model thread
     let mut model = Model::new(running.clone());
+    println!("Time: {}", SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis());
+    let model_thread = thread::spawn(move || { 
+        println!("Time: {}", SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis());
+    });
+    println!("Time in first thread: {}", SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis());
+
     let model_thread = thread::spawn(move || { 
         model.run();
     });

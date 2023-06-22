@@ -1,8 +1,7 @@
-use std::{sync::{atomic::{AtomicBool, Ordering}, Arc}, os::windows::thread, time::Duration};
-use tokio::sync::RwLock as AsyncRwLock;
+use std::{sync::{atomic::{AtomicBool, Ordering}}, os::windows::thread, time::Duration};
 
 use crate::game_objects::{game_object::DrawableObject, static_object::StaticObject};
-
+use async_std::sync::{Arc, RwLock as AsyncRwLock};
 
 //these types are just shorthand for the long type names, making it more easy to assess them
 pub(crate) type GameObjectList = Arc<AsyncRwLock<Vec<Box<dyn DrawableObject + Send + Sync>>>>;
