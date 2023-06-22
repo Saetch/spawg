@@ -91,19 +91,19 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: DummyPosition) -> (Ren
 
     //now we create a struct that holds all these important things, so we can use it 
     (
-    Renderer{
-        window,
-        surface,
-        device,
-        queue,
-        config,
-        size,
-        running,
-        shader,
-        cam_pos:  cam_position,
-        instances: None, 
-        instance_buffer: None
-    },
-    event_loop
+        Renderer{
+            window,
+            surface,
+            device,
+            queue,
+            config,
+            size,
+            running,
+            shader,
+            cam_pos:  cam_position,
+            instances: Vec::new(),
+            instance_buffer: None
+        },
+        event_loop
     )
 }
