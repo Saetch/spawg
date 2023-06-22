@@ -1,13 +1,14 @@
 use std::sync::{Arc, RwLock};
+#[derive(Debug)]
 
 pub struct Position {
-    x: Arc<RwLock<f32>>,
-    y: Arc<RwLock<f32>>,
+    pub x: Arc<RwLock<f32>>,
+    pub y: Arc<RwLock<f32>>,
 }
 
 impl Position {
     pub fn new(x: f32, y: f32) -> Self {
-        CamPosition {
+        Position {
             x: Arc::new(RwLock::new(x)),
             y: Arc::new(RwLock::new(y)),
         }
