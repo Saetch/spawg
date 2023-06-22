@@ -4,7 +4,6 @@ use std::sync::RwLock;
 use std::sync::{Arc, atomic::AtomicBool};
 
 use flume::Receiver;
-use piston_window::MouseButton;
 use winit::event::VirtualKeyCode;
 
 use crate::controller::input::MouseInputType; //

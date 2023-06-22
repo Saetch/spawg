@@ -3,7 +3,7 @@ use std::sync::{atomic::AtomicBool, Arc, RwLock};
 use wgpu::{util::DeviceExt, ShaderModule, RenderPipeline, BindGroup};
 use winit::{window::Window, event::WindowEvent};
 
-use crate::rendering::vertex::Vertex;
+use crate::{rendering::vertex::Vertex, controller::position::Position};
 
 use super::sprite_instance::SpriteInstance;
 
@@ -18,17 +18,13 @@ pub struct Renderer {
     pub(crate) window: Window,
     pub(crate) running: Arc<AtomicBool>,  //<-- this is used to indicate whether the program should exit or not
     pub(crate) shader: ShaderModule,
-    pub(crate) cam_pos: DummyPosition,
+    pub(crate) cam_pos: Position,
     pub(crate) instances: Vec<SpriteInstance>,
     pub(crate) instance_buffer: Option<wgpu::Buffer>,
 
 }
 
-#[derive(Debug)]
-pub struct DummyPosition {
-    pub(crate) x: Arc<RwLock<f32>>,
-    pub(crate) y: Arc<RwLock<f32>>,
-}
+
 
 impl Renderer {
 

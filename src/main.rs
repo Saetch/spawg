@@ -1,8 +1,7 @@
 use std::{sync::{atomic::AtomicBool, Arc, RwLock}, thread};
 
-use controller::controller::Controller;
+use controller::{controller::Controller, position::Position};
 use model::model::Model;
-use rendering::wgpurenderer::DummyPosition;
 
 use crate::rendering::wgpurenderer::Renderer;
 
@@ -32,7 +31,7 @@ pub async fn main() {
     });
     join_handles_vec.push(model_thread);
     let mut controller = Controller::new(controller_receiver);
-    let cam_pos = DummyPosition{x: Arc::new(RwLock::new(0.0f32)), y: Arc::new(RwLock::new(0.0f32))};//get cam_position from the controller here, this is just placeholder
+    let cam_pos = Position{x: Arc::new(RwLock::new(0.0f32)), y: Arc::new(RwLock::new(0.0f32))};//get cam_position from the controller here, this is just placeholder
     let controller_thread = thread::spawn(move || { 
         controller.run();
     });
