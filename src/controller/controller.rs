@@ -18,7 +18,7 @@ use super::position::Position;
 
 pub(crate) struct Controller{
     receiver: Receiver<ControllerInput>,
-    position: Position
+    pub(crate) position: Position
       
 }
 

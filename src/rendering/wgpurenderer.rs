@@ -80,13 +80,14 @@ impl Renderer {
     pub(crate) fn render(&mut self, render_pipeline: &RenderPipeline, bind_group: &BindGroup) -> Result<(), wgpu::SurfaceError> {
 
 
-
-
+        let cam_pos = &self.cam_pos;
+        let x_os = *cam_pos.x.read().unwrap() *0.01;
+        let y_os = *cam_pos.y.read().unwrap() *0.01;
         let vertices: &[Vertex] = &[
-            Vertex { position: [1.0, 0.0], tex_coords: [1.0, 1.0], texture_id: 0 }, // A
-            Vertex { position: [1.0, 1.0], tex_coords: [1.0, 0.0], texture_id: 0 }, // B
-            Vertex { position: [0.0, 1.0], tex_coords: [0.0, 0.0], texture_id: 0 }, // C
-            Vertex { position: [0.0, 0.0], tex_coords: [0.0, 1.0], texture_id: 0 }, // D
+            Vertex { position: [1.0-x_os, 0.0-y_os], tex_coords: [1.0, 1.0], texture_id: 0 }, // A
+            Vertex { position: [1.0-x_os, 1.0-y_os], tex_coords: [1.0, 0.0], texture_id: 0 }, // B
+            Vertex { position: [0.0-x_os, 1.0-y_os], tex_coords: [0.0, 0.0], texture_id: 0 }, // C
+            Vertex { position: [0.0-x_os, 0.0-y_os], tex_coords: [0.0, 1.0], texture_id: 0 }, // D
         ];
 
 
