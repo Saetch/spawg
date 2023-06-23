@@ -17,7 +17,6 @@ impl Renderer {
         //this is the most important struct for the current state. Almost all infos are grouped here
         let (mut renderer, event_loop) = init(running, cam_pos).await;  //we cannot put the event_loop into the Renderer struct, as the .run() function requires a move, which takes ownership of the values in it. And it is not possible for a data field to take ownership of the struct it is in
         
-        renderer.instance();
         #[allow(unused)]
         let (mut render_pipeline, mut bind_group) = load_sprites(0, &renderer);
         

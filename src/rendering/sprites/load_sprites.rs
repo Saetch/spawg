@@ -2,9 +2,8 @@ use std::{num::NonZeroU32, default};
 
 use wgpu::{TextureUsages, Device, RenderPipeline, BindGroup, ShaderModule, SurfaceConfiguration, TextureView};
 
-use crate::rendering::{vertex::Vertex, wgpurenderer::Renderer};
+use crate::rendering::{vertex::Vertex, wgpurenderer::Renderer, sprite_instance::SpriteInstance};
 use image::{GenericImageView, ImageBuffer};
-
 use super::load_level_sprites::initial_level::load_initial_level_sprites;
 
 
@@ -85,7 +84,7 @@ pub fn load_sprites(_i: u32, renderer: &Renderer) -> (RenderPipeline, BindGroup)
                 module: &renderer.shader,
                 entry_point: "vs_main", // 1.
                 buffers: &[
-                    Vertex::desc(),                                 //insert the vertex buffer that was created above
+                    Vertex::desc(), SpriteInstance::desc()                             //insert the vertex buffer that was created above
                 ], // 2.
             },
             fragment: Some(wgpu::FragmentState { // 3.              //fragment is optional and thus wrapped in Some(), this is needed for storing color on the surface

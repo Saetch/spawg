@@ -103,8 +103,7 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: Position) -> (Renderer
             running,
             shader,
             cam_pos:  cam_position,
-            instances: Vec::new(),
-            instance_buffer: None
+
         },
         event_loop
     )

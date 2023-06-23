@@ -3,7 +3,7 @@ use std::sync::{atomic::AtomicBool, Arc, RwLock};
 use wgpu::{util::DeviceExt, ShaderModule, RenderPipeline, BindGroup};
 use winit::{window::Window, event::WindowEvent};
 
-use crate::{rendering::vertex::Vertex, controller::position::Position};
+use crate::{rendering::{vertex::Vertex, sprites::sprite_mapping::Sprite}, controller::position::Position};
 
 use super::sprite_instance::SpriteInstance;
 
@@ -19,37 +19,21 @@ pub struct Renderer {
     pub(crate) running: Arc<AtomicBool>,  //<-- this is used to indicate whether the program should exit or not
     pub(crate) shader: ShaderModule,
     pub(crate) cam_pos: Position,
-    pub(crate) instances: Vec<SpriteInstance>,
-    pub(crate) instance_buffer: Option<wgpu::Buffer>,
 
+}
+
+#[derive(Debug)]
+pub struct SpriteBuffer {
+    pub(crate) instance_buffer: wgpu::Buffer,
+    pub(crate) vertex_buffer: wgpu::Buffer,
+    pub(crate) num_indices: u32,
 }
 
 
 
 impl Renderer {
 
-    pub fn instance(&mut self){
-        const NUM_INSTANCES_PER_ROW: u32 = 2;
 
-
-        for i in 0..NUM_INSTANCES_PER_ROW {
-            for j in 0..NUM_INSTANCES_PER_ROW {
-                let instance = SpriteInstance {
-                    position: [i as f32, j as f32],
-                    texture_id: 0,
-                };
-                self.instances.push(instance);
-            }
-        } 
-
-        let instance_buffer = self.device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Instance Buffer"),
-                contents: bytemuck::cast_slice(self.instances.as_slice()),
-                usage: wgpu::BufferUsages::VERTEX,
-    }
-);
-    }
 
     pub fn window(&self) -> &Window {
         &self.window
@@ -80,25 +64,38 @@ impl Renderer {
     pub(crate) fn render(&mut self, render_pipeline: &RenderPipeline, bind_group: &BindGroup) -> Result<(), wgpu::SurfaceError> {
 
 
+        let mut sprite_buffers = Vec::new();
+
         let cam_pos = &self.cam_pos;
         let x_os = *cam_pos.x.read().unwrap() *0.01;
         let y_os = *cam_pos.y.read().unwrap() *0.01;
         let vertices: &[Vertex] = &[
-            Vertex { position: [1.0-x_os, 0.0-y_os], tex_coords: [1.0, 1.0], texture_id: 0 }, // A
-            Vertex { position: [1.0-x_os, 1.0-y_os], tex_coords: [1.0, 0.0], texture_id: 0 }, // B
-            Vertex { position: [0.0-x_os, 1.0-y_os], tex_coords: [0.0, 0.0], texture_id: 0 }, // C
-            Vertex { position: [0.0-x_os, 0.0-y_os], tex_coords: [0.0, 1.0], texture_id: 0 }, // D
+            Vertex { position: [0.5, -0.5], tex_coords: [1.0, 1.0]}, // A
+            Vertex { position: [0.5, 0.5], tex_coords: [1.0, 0.0]}, // B
+            Vertex { position: [-0.5, 0.5], tex_coords: [0.0, 0.0] }, // C
+            Vertex { position: [-0.5, -0.5], tex_coords: [0.0, 1.0] }, // D
         ];
 
+        let mut instances = Vec::new();
+        instances.push(SpriteInstance {
+            position: [0.5-x_os, 0.5-y_os],
+            texture_id: Sprite::DwarfBaseHousePixelated as u32,
+        });
 
 
+        let instance_buffer = self.device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Instance Buffer"),
+                contents: bytemuck::cast_slice(&instances),
+                usage: wgpu::BufferUsages::VERTEX,
+            }
+        );
         
         const INDICES: &[u16] = &[
             0, 1, 2,
             0, 2, 3,
         ];
         let num_indices = INDICES.len() as u32;
-
 
 
         //the surface is the inner part of the window, the output (surfaceTexture) is the actual texture that we will render to
@@ -127,6 +124,13 @@ impl Renderer {
             }
         );
 
+        
+        sprite_buffers.push(SpriteBuffer {
+            instance_buffer,
+            vertex_buffer,
+            num_indices,
+        });
+
         //these {} brackets are used, because begin_render_pass borrows encoder mutably and we need to return that borrow before we can call encoder.finish()
         {
             
@@ -148,14 +152,15 @@ impl Renderer {
                 depth_stencil_attachment: None,
             });
 
-
+            for sprite_buffer in sprite_buffers.iter() {
                 // NEW!
             render_pass.set_pipeline(&render_pipeline);   //the correct pipeline tells the GPU what shaders will be used on the vertices
             render_pass.set_bind_group(0, bind_group, &[]);  //this bind group contains the textures we loaded, if we want to switch all of the textures at once, we can do that by switching to another bind group. Might create some interesting effects
-            render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-            //render_pass.set_vertex_buffer(1, self.instance_buffer.as_ref().unwrap().slice(..));
+            render_pass.set_vertex_buffer(0, sprite_buffer.vertex_buffer.slice(..));
+            render_pass.set_vertex_buffer(1, sprite_buffer.instance_buffer.slice(..));
             render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-            render_pass.draw_indexed(0..num_indices, 0, 0..1);
+            render_pass.draw_indexed(0..sprite_buffer.num_indices, 0, 0..instances.len() as u32);
+            }
         }
     
         // submit will accept anything that implements IntoIter
