@@ -1,2 +1,3 @@
 pub(crate) mod load_sprites;
 pub(crate) mod sprite_mapping;
+pub(crate) mod load_level_sprites;
