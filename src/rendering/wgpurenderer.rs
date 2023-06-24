@@ -1,9 +1,10 @@
 use std::sync::{atomic::AtomicBool, Arc, RwLock};
 
+use async_std::task::{TaskId, Task, block_on};
 use wgpu::{util::DeviceExt, ShaderModule, RenderPipeline, BindGroup};
 use winit::{window::Window, event::WindowEvent};
 
-use crate::{rendering::{vertex::Vertex, sprites::sprite_mapping::Sprite}, controller::position::Position};
+use crate::{rendering::{vertex::Vertex, sprites::sprite_mapping::Sprite}, controller::{position::Position, controller::SharablePosition}, model::model::GameObjectList};
 
 use super::sprite_instance::SpriteInstance;
 
@@ -18,8 +19,8 @@ pub struct Renderer {
     pub(crate) window: Window,
     pub(crate) running: Arc<AtomicBool>,  //<-- this is used to indicate whether the program should exit or not
     pub(crate) shader: ShaderModule,
-    pub(crate) cam_pos: Position,
-
+    pub(crate) cam_pos: SharablePosition,
+    pub(crate) objects: Option<GameObjectList>,
 }
 
 #[derive(Debug)]
@@ -56,19 +57,39 @@ impl Renderer {
         false
     }
 
-    fn update(&mut self) {
-
-    }
-
     #[inline(always)]
     pub(crate) fn render(&mut self, render_pipeline: &RenderPipeline, bind_group: &BindGroup) -> Result<(), wgpu::SurfaceError> {
 
 
         let mut sprite_buffers = Vec::new();
 
-        let cam_pos = &self.cam_pos;
-        let x_os = *cam_pos.x.read().unwrap() *0.01;
-        let y_os = *cam_pos.y.read().unwrap() *0.01;
+        let cam_pos = self.cam_pos.read().unwrap();
+        let x_os = cam_pos.x *0.01;
+        let y_os = cam_pos.y *0.01;
+        drop(cam_pos);
+
+        let lock = block_on(async {
+            self.objects.as_ref().unwrap().read().await
+        });
+        lock.iter().for_each(|obj| {
+            let mut instances = Vec::new();
+            instances.push(SpriteInstance {
+                position: [obj.get_position().x-x_os, obj.get_position().y-y_os],
+                texture_id: Sprite::DwarfBaseHousePixelated as u32,
+            });
+            let instance_buffer = self.device.create_buffer_init(
+                &wgpu::util::BufferInitDescriptor {
+                    label: Some("Instance Buffer"),
+                    contents: bytemuck::cast_slice(&instances),
+                    usage: wgpu::BufferUsages::VERTEX,
+                }
+            );
+            sprite_buffers.push(SpriteBuffer {
+                instance_buffer,
+                vertex_buffer: obj.sprite.vertex_buffer.clone(),
+                num_indices: obj.sprite.num_indices,
+            });
+        });
         let vertices: &[Vertex] = &[
             Vertex { position: [0.5, -0.5], tex_coords: [1.0, 1.0]}, // A
             Vertex { position: [0.5, 0.5], tex_coords: [1.0, 0.0]}, // B

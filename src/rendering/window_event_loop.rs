@@ -1,8 +1,9 @@
 use std::{sync::{atomic::AtomicBool, Arc}, thread::JoinHandle};
 
+use flume::Receiver;
 use winit::{event::{Event, WindowEvent}, event_loop::{ControlFlow}};
 
-use crate::controller::{input::{ControllerInput, MouseInputType}, position::Position};
+use crate::controller::{input::{ControllerInput, MouseInputType}, position::Position, controller::SharablePosition, renderer_commands::RendererCommand};
 
 use super::{init::init, wgpurenderer::{Renderer}, sprites::load_sprites::load_sprites};
 
@@ -11,7 +12,7 @@ impl Renderer {
     //this is the main loop of the program, it will be called from main.rs
     //this whole file is only for putting the event loop and window handling in one easy to use place
     #[inline(always)]
-    pub(crate) async fn run(running: Arc<AtomicBool>, mut join_handles: Vec<JoinHandle<()>>, controller_sender: flume::Sender<ControllerInput>, cam_pos: Position) {
+    pub(crate) async fn run(running: Arc<AtomicBool>, mut join_handles: Vec<JoinHandle<()>>, controller_sender: flume::Sender<ControllerInput>, controller_receiver: Receiver<RendererCommand>, cam_pos: SharablePosition) {
 
 
         //this is the most important struct for the current state. Almost all infos are grouped here
@@ -128,6 +129,12 @@ impl Renderer {
             let res = renderer.render(&render_pipeline, &bind_group);
             if let Err(e) = res {
                 eprintln!("Error during rendering: {:?}", e);
+            }
+
+            while let Ok(command) = controller_receiver.try_recv(){
+                match command {
+                    RendererCommand::PLACEHOLDER => println!("Placeholder command received!"),
+                }
             }
         }
             _ => {}

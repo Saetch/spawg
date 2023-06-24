@@ -3,14 +3,16 @@ use std::{sync::{atomic::AtomicBool, Arc}, num::NonZeroU32};
 use wgpu::{Queue, Surface, Device, SurfaceConfiguration, RenderPipeline, util::DeviceExt, ShaderModule};
 use winit::{window::{Window, WindowBuilder}, event_loop::{EventLoop, self}, dpi::PhysicalSize};
 
-use crate::controller::position::Position;
+use crate::controller::{position::Position, controller::SharablePosition};
 
 use super::{wgpurenderer::{Renderer}, vertex::Vertex};
 
 // Creating some of the wgpu types requires async code
-pub async fn init(running: Arc<AtomicBool>, cam_position: Position) -> (Renderer, event_loop::EventLoop<()>) {
+pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (Renderer, event_loop::EventLoop<()>) {
     let event_loop = EventLoop::new();          //event loop is the basic loop of a window. A window needs one, otherwise it does nothing
-    let window = WindowBuilder::new().build(&event_loop).unwrap();     //builds a window with the event loop. We could open multiple windows from a single program, but for now we don't need to
+    const FORMAT: f64 = 16.0 / 9.0;                  //the aspect ratio of the window
+    let requested_size = PhysicalSize::new(1400, (1400.0 / FORMAT) as u32);
+    let window = WindowBuilder::new().with_inner_size(requested_size).build(&event_loop).unwrap();     //builds a window with the event loop. We could open multiple windows from a single program, but for now we don't need to
 
     let size = window.inner_size();
 
@@ -80,10 +82,6 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: Position) -> (Renderer
 
     let shader = device.create_shader_module(wgpu::include_wgsl!("shader.wgsl"));
 
-
-
-
-    //let (render_pipeline, bind_group) = load_sprites(0, );
     //I thought at first to load the sprites here, but this is not a good idea, since we need to load them every time we change the sprite sheet
 
 
@@ -103,7 +101,7 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: Position) -> (Renderer
             running,
             shader,
             cam_pos:  cam_position,
-
+            objects: None
         },
         event_loop
     )

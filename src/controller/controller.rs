@@ -1,45 +1,55 @@
 
 
 use std::sync::RwLock;
-use std::sync::{Arc, atomic::AtomicBool};
+use std::sync::{Arc};
 
-use flume::Receiver;
+use flume::{Receiver, Sender};
 use winit::event::VirtualKeyCode;
 
-use crate::controller::input::MouseInputType; //
+use crate::controller::input::MouseInputType;
+use crate::model::load_level_functions::Level;
 
+use super::controller_commands::ControllerCommand;
 use super::input::ControllerInput;
 
 use super::position::Position;
+use super::renderer_commands::RendererCommand;
 
 
-
+pub type SharablePosition = Arc<RwLock<Position>>;
 
 
 pub(crate) struct Controller{
     receiver: Receiver<ControllerInput>,
-    pub(crate) position: Position
-      
-}
+    pub(crate) cam_position: SharablePosition,
+    model_sender: Sender<ControllerCommand>,//<-- this is used to send messages to the model, the model is supposed to evaluate them and process accordingly
+                                             //for example: self.model_sender.send(ControllerCommand::SpawnHouseAtPosition { spawn_position: (0.0, 0.0) }).unwrap();
+    renderer_sender: Sender<RendererCommand>,
+
+}                                   
+             
 
 
 
 
 impl Controller{
-    pub(crate) fn new( receiver: Receiver<ControllerInput>) -> Self{
+    pub(crate) fn new( receiver: Receiver<ControllerInput>, controller_to_model_sender: Sender<ControllerCommand>, renderer_sender: Sender<RendererCommand>) -> Self{
         Self{
             receiver: receiver,
-            position: Position { x: Arc::new(RwLock::new(0.0)), y: Arc::new(RwLock::new(0.0)) }
+            cam_position: Arc::new(RwLock::new(Position::new(0.0, 0.0))),
+            model_sender: controller_to_model_sender,
+            renderer_sender
         }
     }
 
 
     pub(crate) fn run(&mut self){
+        self.model_sender.send(ControllerCommand::LoadLevel(Level::Initial)).unwrap();   //here we define what level should start. We use the controller for that, just because it is supposed to later decide what level to load anyways
+
 
         let mut personal_running_bool = true;       //we dont need a shared value, as we get notified of a shutdown via the channel
         while personal_running_bool{
             let received = self.receiver.recv().unwrap();
-
             match received{
                 ControllerInput::Exit => {
                     personal_running_bool = false;
@@ -71,28 +81,28 @@ impl Controller{
             match key {
                 VirtualKeyCode::Up => {
                     // Verarbeitung für Pfeiltaste nach oben
-                    let mut lock = self.position.y.write().unwrap();
-                    *lock += 10.0;
+                    let mut lock = self.cam_position.write().unwrap();
+                    (*lock).y += 10.0;
                 }
                 VirtualKeyCode::Down => {
-                    let mut lock = self.position.y.write().unwrap();
+                    let mut lock = self.cam_position.write().unwrap();
                     // Verarbeitung für Pfeiltaste nach unten
-                    *lock -= 10.0;
+                    (*lock).y -= 10.0;
                 }
                 VirtualKeyCode::Left => {
                     // Verarbeitung für Pfeiltaste nach links
-                    let mut lock = self.position.x.write().unwrap();
-                    *lock -= 10.0;
+                    let mut lock = self.cam_position.write().unwrap();
+                    (*lock).x -= 10.0;
                 }
                 VirtualKeyCode::Right => {
                     // Verarbeitung für Pfeiltaste nach rechts
-                    let mut lock = self.position.x.write().unwrap();
-                    *lock += 10.0;
+                    let mut lock = self.cam_position.write().unwrap();
+                    (*lock).x += 10.0;
                 }
                 _ => {}
             }
         }
-        print!("{:?}", self.position);
+        print!("{:?}", self.cam_position);
     }
 
 
