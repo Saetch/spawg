@@ -1,19 +1,18 @@
-
-
 use std::sync::RwLock;
 use std::sync::{Arc};
-
 use flume::{Receiver, Sender};
 use winit::event::VirtualKeyCode;
-
 use crate::controller::input::MouseInputType;
 use crate::model::load_level_functions::Level;
-
 use super::controller_commands::ControllerCommand;
 use super::input::ControllerInput;
-
 use super::position::Position;
 use super::renderer_commands::RendererCommand;
+
+
+const CAM_INITIAL_WIDTH: u32 = 24;
+const CAM_INITIAL_HEIGHT: u32 = 14;
+const CAM_RATIO: f32 = 1280.0 / 720.0; //this is the ratio of the camera, it is used to calculate objects' positions on the screen
 
 
 pub type SharablePosition = Arc<RwLock<Position>>;
@@ -22,6 +21,7 @@ pub type SharablePosition = Arc<RwLock<Position>>;
 pub(crate) struct Controller{
     receiver: Receiver<ControllerInput>,
     pub(crate) cam_position: SharablePosition,
+    pub(crate) cam_proportions: Arc<RwLock<(u32, u32)>>,
     model_sender: Sender<ControllerCommand>,//<-- this is used to send messages to the model, the model is supposed to evaluate them and process accordingly
                                              //for example: self.model_sender.send(ControllerCommand::SpawnHouseAtPosition { spawn_position: (0.0, 0.0) }).unwrap();
     renderer_sender: Sender<RendererCommand>,
@@ -38,6 +38,7 @@ impl Controller{
             receiver: receiver,
             cam_position: Arc::new(RwLock::new(Position::new(0.0, 0.0))),
             model_sender: controller_to_model_sender,
+            cam_proportions: Arc::new(RwLock::new((CAM_INITIAL_WIDTH, CAM_INITIAL_HEIGHT))),
             renderer_sender
         }
     }

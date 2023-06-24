@@ -154,11 +154,11 @@ impl Renderer {
             let already_queued = render_ops.iter_mut().find(|chunk| chunk.vertex_conf as u32 == *vertex_configration as u32);
             if let Some(queue) = already_queued{
                 queue.instance_buffer.push(SpriteInstance {
-                    position: [position.x-x_os, position.y-y_os],
+                    position: [position.x/12.0-x_os, position.y/7.0-y_os],
                     texture_id: texture_id,
                 });
             }else{
-                let vertex_buffer = Vec::from(vertex_configration.get_vertices());
+                let vertex_buffer = Vec::from(vertex_configration.get_vertices((24, 14)));
                 let instance_buffer = 
                     vec![SpriteInstance {
                         position: [position.x-x_os, position.y-y_os],
@@ -249,3 +249,4 @@ impl Renderer {
 
     }
 }
+

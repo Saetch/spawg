@@ -22,7 +22,8 @@ impl Model{
 
 
         //add a debug house, here other stuff is loaded aswell
-        lock.push(Box::new(DebugHouse::new(Sprite::DwarfBaseHouse, Position::new(0.0, 0.0), VertexConfigration::SQUARE_1_1)));
+        lock.push(Box::new(DebugHouse::new(Sprite::DwarfBaseHouse, Position::new(0.0, 0.0), VertexConfigration::SQUARE_SMALL_1)));   //these are debug objects and thus require what texture and size they need, usually objects will silently put these in the constructor or just have const fn for these
+        lock.push(Box::new(DebugHouse::new(Sprite::DwarfBaseHousePixelated, Position::new(6.0, 0.25), VertexConfigration::SQUARE_SMALL_1)));
 
         drop(lock);         //this would be done automatically, but we drop it manually, so that it is released faster if we do anything else in this function after this point
     }

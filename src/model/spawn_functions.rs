@@ -7,6 +7,6 @@ use super::model::Model;
 impl Model{
     pub(crate) async fn spawn_house_at_position(&self, pos: (f32, f32)){
         let mut lock = self.game_objects.write().await;
-        lock.push(Box::new(DebugHouse::new(Sprite::DwarfBaseHouse, Position::new(pos.0, pos.1), VertexConfigration::SQUARE_1_1)));
+        lock.push(Box::new(DebugHouse::new(Sprite::DwarfBaseHouse, Position::new(pos.0, pos.1), VertexConfigration::SQUARE_SMALL_1)));
     }
 }
