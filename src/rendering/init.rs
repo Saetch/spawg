@@ -66,6 +66,9 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (
         .find(|f: &wgpu::TextureFormat| f.is_srgb())            
         .unwrap_or(surface_caps.formats[0]);
 
+    println!("Surface capabilities: {:?}", surface_caps);   //<-- just print out what our device can do
+
+    let present_mode = surface_caps.present_modes.iter().find(|mode| mode == &&wgpu::PresentMode::Mailbox).unwrap_or(&wgpu::PresentMode::Fifo);
     //here we create a surface configuration, this is basically just a configuration we need so we can tell the GPU
     //what to do with the surface. We need to tell it what format to use, what size to use, what present mode to use, etc.
     let config = wgpu::SurfaceConfiguration {
@@ -73,7 +76,7 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (
         format: surface_format,                        //the format we just got from the surface_caps, most likely Bgra8UnormSrgb
         width: size.width,                             //this is the size of the window
         height: size.height,
-        present_mode: surface_caps.present_modes[0],   //this basically is wgpu::PresentMode::Fifo (FIFO = First In First Out), since this is always supported and always the first
+        present_mode: *present_mode,   //this basically is wgpu::PresentMode::Fifo (FIFO = First In First Out), since this is always supported and always the first
         alpha_mode: surface_caps.alpha_modes[0],       //this basically is wgpu::AlphaMode::Opaque, since this is always supported and always the first
         view_formats: vec![],
     };
@@ -100,8 +103,7 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (
             size,
             running,
             shader,
-            cam_pos:  cam_position,
-            objects: None
+            render_receiver: None,
         },
         event_loop
     )

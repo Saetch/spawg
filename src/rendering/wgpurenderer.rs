@@ -22,8 +22,8 @@ pub struct Renderer {
     pub(crate) window: Window,
     pub(crate) running: Arc<AtomicBool>,  //<-- this is used to indicate whether the program should exit or not
     pub(crate) shader: ShaderModule,
-    pub(crate) cam_pos: SharablePosition,
-    pub(crate) objects: Option<GameObjectList>,
+    pub(crate) render_receiver: Option<flume::Receiver<Vec<RenderChunk>>>,
+
 }
 
 #[derive(Debug)]
@@ -134,46 +134,11 @@ impl Renderer {
     pub(crate) fn render(&mut self, render_pipeline: &RenderPipeline, bind_group: &BindGroup) -> Result<(), wgpu::SurfaceError> {
 
 
+        if self.render_receiver.is_none(){
+            return Ok(());
+        }
 
-        let cam_pos = self.cam_pos.read().unwrap();
-        let x_os = cam_pos.x *0.01;
-        let y_os = cam_pos.y *0.01;
-        drop(cam_pos);
-
-
-        let mut render_ops: Vec<RenderChunk> = Vec::new();
-        let lock = block_on(async {
-            self.objects.as_ref().unwrap().read().await
-        });
-        lock.iter().for_each(|obj| {
-            let texture_id = *obj.get_texture() as u32;
-            let position = obj.get_position();
-
-            let vertex_configration = obj.get_vertex_configuration();
-
-            let already_queued = render_ops.iter_mut().find(|chunk| chunk.vertex_conf as u32 == *vertex_configration as u32);
-            if let Some(queue) = already_queued{
-                queue.instance_buffer.push(SpriteInstance {
-                    position: [position.x/12.0-x_os, position.y/7.0-y_os],
-                    texture_id: texture_id,
-                });
-            }else{
-                let vertex_buffer = Vec::from(vertex_configration.get_vertices((24, 14)));
-                let instance_buffer = 
-                    vec![SpriteInstance {
-                        position: [position.x-x_os, position.y-y_os],
-                        texture_id: texture_id,
-                    }];
-                let render_chunk = RenderChunk{
-                    vertex_conf: *vertex_configration,
-                    vertex_buffer: vertex_buffer,
-                    instance_buffer: instance_buffer,   //this is because a sprite consists of 2 triangles at the moment. If this changes and can be dynamically set, this should be updated
-                };
-                render_ops.push(render_chunk);
-            }
-
-        });
-        drop(lock);
+        let render_ops = self.render_receiver.as_ref().unwrap().recv().unwrap();
   
         let mut chunk_raw_vec = Vec::with_capacity(render_ops.len());
 
@@ -183,10 +148,7 @@ impl Renderer {
             chunk_raw_vec.push(raw);
         }
         
-        let lock = block_on(async {
-            self.objects.as_ref().unwrap().read().await
-        });
-
+        
         //the surface is the inner part of the window, the output (surfaceTexture) is the actual texture that we will render to
         let output = self.surface.get_current_texture()?;
         

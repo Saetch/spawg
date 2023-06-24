@@ -5,24 +5,24 @@ use winit::{event::{Event, WindowEvent}, event_loop::{ControlFlow}};
 
 use crate::{controller::{input::{ControllerInput, MouseInputType}, position::Position, controller::SharablePosition, renderer_commands::RendererCommand}, model::model::GameObjectList};
 
-use super::{init::init, wgpurenderer::{Renderer}, sprites::load_sprites::load_sprites};
+use super::{init::init, wgpurenderer::{Renderer, RenderChunk}, sprites::load_sprites::load_sprites};
 
 impl Renderer {
 
     //this is the main loop of the program, it will be called from main.rs
     //this whole file is only for putting the event loop and window handling in one easy to use place
     #[inline(always)]
-    pub(crate) async fn run(running: Arc<AtomicBool>, mut join_handles: Vec<JoinHandle<()>>, controller_sender: flume::Sender<ControllerInput>, controller_receiver: Receiver<RendererCommand>, cam_pos: SharablePosition, game_objects: GameObjectList) {
+    pub(crate) async fn run(running: Arc<AtomicBool>, mut join_handles: Vec<JoinHandle<()>>, controller_sender: flume::Sender<ControllerInput>, controller_receiver: Receiver<RendererCommand>, cam_pos: SharablePosition, renderer_receiver: Receiver<Vec<RenderChunk>>) {
 
 
         //this is the most important struct for the current state. Almost all infos are grouped here
         let (mut renderer, event_loop) = init(running, cam_pos).await;  //we cannot put the event_loop into the Renderer struct, as the .run() function requires a move, which takes ownership of the values in it. And it is not possible for a data field to take ownership of the struct it is in
-        
+        renderer.render_receiver = Some(renderer_receiver);
+
+
         #[allow(unused)]
         let (mut render_pipeline, mut bind_group) = load_sprites(0, &renderer);
         
-        renderer.objects = Some(game_objects);
-
         
         event_loop.run(move |event, _, control_flow| match event {
             Event::RedrawRequested(window_id) if window_id == renderer.window.id() => {
@@ -55,6 +55,7 @@ impl Renderer {
                 }
                 WindowEvent::CloseRequested
                  => {
+                    renderer.render_receiver = None;
                     renderer.running.store(false, std::sync::atomic::Ordering::SeqCst);
                     controller_sender.send(ControllerInput::Exit).expect("Could not send exit info to controller thread!");
                     //now we wait for the other threads to finish, before we finally close the program completely we cannot just use for handles in join_handles, because they would still exist, but be captured by the move closure, which would be a problem
