@@ -168,7 +168,7 @@ impl Renderer {
                     vertex_buffer: vertex_buffer,
                     index_buffer: index_buffer,
                     sprite_buffer: sprite_buffer,
-                    num_indices: 4,
+                    num_indices: 6,   //this is because a sprite consists of 2 triangles at the moment. If this changes and can be dynamically set, this should be updated
                 };
                 render_ops.push(render_chunk);
             }
@@ -202,7 +202,7 @@ impl Renderer {
             label: Some("Render Encoder"),
         });
 
-
+        
         //these {} brackets are used, because begin_render_pass borrows encoder mutably and we need to return that borrow before we can call encoder.finish()
         {
             
@@ -224,6 +224,7 @@ impl Renderer {
                 depth_stencil_attachment: None,
             });
 
+
             for render_op in chunk_raw_vec.iter() {
 
 
@@ -234,8 +235,14 @@ impl Renderer {
                 render_pass.set_index_buffer(render_op.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
                 render_pass.draw_indexed(0..render_op.num_indices, 0, 0..render_op.instances_len as u32);
             }
+
+
+
+
         }
-    
+        
+
+        
         // submit will accept anything that implements IntoIter
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
