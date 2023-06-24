@@ -3,7 +3,7 @@ use std::{sync::{atomic::AtomicBool, Arc}, thread::JoinHandle};
 use flume::Receiver;
 use winit::{event::{Event, WindowEvent}, event_loop::{ControlFlow}};
 
-use crate::controller::{input::{ControllerInput, MouseInputType}, position::Position, controller::SharablePosition, renderer_commands::RendererCommand};
+use crate::{controller::{input::{ControllerInput, MouseInputType}, position::Position, controller::SharablePosition, renderer_commands::RendererCommand}, model::model::GameObjectList};
 
 use super::{init::init, wgpurenderer::{Renderer}, sprites::load_sprites::load_sprites};
 
@@ -12,7 +12,7 @@ impl Renderer {
     //this is the main loop of the program, it will be called from main.rs
     //this whole file is only for putting the event loop and window handling in one easy to use place
     #[inline(always)]
-    pub(crate) async fn run(running: Arc<AtomicBool>, mut join_handles: Vec<JoinHandle<()>>, controller_sender: flume::Sender<ControllerInput>, controller_receiver: Receiver<RendererCommand>, cam_pos: SharablePosition) {
+    pub(crate) async fn run(running: Arc<AtomicBool>, mut join_handles: Vec<JoinHandle<()>>, controller_sender: flume::Sender<ControllerInput>, controller_receiver: Receiver<RendererCommand>, cam_pos: SharablePosition, game_objects: GameObjectList) {
 
 
         //this is the most important struct for the current state. Almost all infos are grouped here
@@ -21,7 +21,7 @@ impl Renderer {
         #[allow(unused)]
         let (mut render_pipeline, mut bind_group) = load_sprites(0, &renderer);
         
-
+        renderer.objects = Some(game_objects);
 
         
         event_loop.run(move |event, _, control_flow| match event {

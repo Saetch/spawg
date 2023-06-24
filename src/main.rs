@@ -30,6 +30,7 @@ pub async fn main() {
 
     //spawn the model thread
     let mut model = Model::new(running.clone(), controller_to_model_receiver);
+    let game_objects = model.game_objects.clone();
     println!("Time: {}", SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis());
     let model_thread = thread::spawn(move || { 
         println!("Time: {}", SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_millis());
@@ -51,5 +52,5 @@ pub async fn main() {
 
 
 
-    Renderer::run(running, join_handles_vec, controller_sender, controller_to_renderer_receiver, cam_pos).await;
+    Renderer::run(running, join_handles_vec, controller_sender, controller_to_renderer_receiver, cam_pos, game_objects).await;
 }

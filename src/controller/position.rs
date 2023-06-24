@@ -1,5 +1,5 @@
 use std::sync::{Arc, RwLock};
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 
 pub struct Position {
     pub x: f32,

@@ -38,7 +38,7 @@ impl Model{
         while self.running.load(Ordering::Relaxed){
 
             while let Ok(command) = self.controller_receiver.try_recv(){
-                self.process_controller_command(command);
+                self.process_controller_command(command).await;
             }
 
             //do stuff
