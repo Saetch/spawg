@@ -8,6 +8,9 @@ use crate::{rendering::{vertex::Vertex, sprites::{sprite_mapping::Sprite, vertex
 
 use super::{sprite_instance::SpriteInstance, sprites::vertex_configration::VertexConfigration};
 
+
+
+const NUM_INDICES_PER_SPRITE: u32 = 6;
 #[derive(Debug)]
 #[allow(unused)]
 pub struct Renderer {
@@ -26,15 +29,13 @@ pub struct Renderer {
 #[derive(Debug)]
 pub struct RenderChunk{
     pub(crate) vertex_conf: VertexConfigration,
-    pub(crate) vertex_buffer: wgpu::Buffer,
-    pub(crate) index_buffer: wgpu::Buffer,
-    pub(crate) sprite_buffer: SpriteBuffer,
-    pub(crate) num_indices: u32,
+    pub(crate) vertex_buffer: Vec<Vertex>,
+    pub(crate) instance_buffer: Vec<SpriteInstance>,
 }
 pub struct RenderChunkRaw{
     pub(crate) vertex_buffer: wgpu::Buffer,
     pub(crate) index_buffer: wgpu::Buffer,
-    pub(crate) sprite_buffer: SpriteBufferRaw,
+    pub(crate) instance_buffer: wgpu::Buffer,
     pub(crate) num_indices: u32,
     pub(crate) instances_len: usize,
 }
@@ -74,21 +75,39 @@ impl Renderer {
     }
 
     #[inline(always)]
+    fn create_vertex_buffer_from_vector(&self, vertex_buffer: Vec<Vertex>) -> wgpu::Buffer {
+        self.device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Vertex Buffer"),
+                contents: bytemuck::cast_slice(&vertex_buffer),
+                usage: wgpu::BufferUsages::VERTEX,
+            }
+        )
+    }
+
+    #[inline(always)]
     fn chunk_to_raw(&self, chunk: RenderChunk) -> RenderChunkRaw{
-        let len = chunk.sprite_buffer.instances_buffer.len();
+        let len = chunk.instance_buffer.len();
+        const INDICES: &[u16] = &[
+            0, 1, 2,  // Triangle ABC
+            0, 2, 3,  // Triangle ACD
+        ];
+        let index_buffer = self.device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Index Buffer"),
+                contents: bytemuck::cast_slice(&INDICES),
+                usage: wgpu::BufferUsages::INDEX,
+            }
+        );
         RenderChunkRaw{
-            vertex_buffer: chunk.vertex_buffer,
-            index_buffer: chunk.index_buffer,
-            sprite_buffer: self.sprite_buffer_to_raw_buffer(chunk.sprite_buffer),
-            num_indices: chunk.num_indices,
+            vertex_buffer: self.create_vertex_buffer_from_vector(chunk.vertex_buffer),
+            index_buffer: index_buffer,
+            instance_buffer: self.create_instance_buffer_from_instance_vector(chunk.instance_buffer),
+            num_indices: NUM_INDICES_PER_SPRITE,
             instances_len: len,
         }
     }
 
-    #[inline(always)]
-    pub(crate) fn sprite_buffer_to_raw_buffer(&self, buffer: SpriteBuffer) -> SpriteBufferRaw {
-        SpriteBufferRaw { instances_buffer: self.create_instance_buffer_from_instance_vector(buffer.instances_buffer) }
-    }
 
     pub fn window(&self) -> &Window {
         &self.window
@@ -134,41 +153,21 @@ impl Renderer {
 
             let already_queued = render_ops.iter_mut().find(|chunk| chunk.vertex_conf as u32 == *vertex_configration as u32);
             if let Some(queue) = already_queued{
-                queue.sprite_buffer.instances_buffer.push(SpriteInstance {
+                queue.instance_buffer.push(SpriteInstance {
                     position: [position.x-x_os, position.y-y_os],
                     texture_id: texture_id,
                 });
             }else{
-                let vertex_buffer = self.device.create_buffer_init(
-                    &wgpu::util::BufferInitDescriptor {
-                        label: Some("Index Buffer"),
-                        contents: bytemuck::cast_slice(&vertex_configration.get_vertices()),
-                        usage: wgpu::BufferUsages::VERTEX,
-                    }
-                );
-                let sprite_buffer = SpriteBuffer {
-                    instances_buffer: vec![SpriteInstance {
+                let vertex_buffer = Vec::from(vertex_configration.get_vertices());
+                let instance_buffer = 
+                    vec![SpriteInstance {
                         position: [position.x-x_os, position.y-y_os],
                         texture_id: texture_id,
-                    }],
-                };
-                const INDICES: &[u16] = &[
-                    0, 1, 2,  // Triangle ABC
-                    0, 2, 3,  // Triangle ACD
-                ];
-                let index_buffer = self.device.create_buffer_init(
-                    &wgpu::util::BufferInitDescriptor {
-                        label: Some("Index Buffer"),
-                        contents: bytemuck::cast_slice(&INDICES),
-                        usage: wgpu::BufferUsages::INDEX,
-                    }
-                );
+                    }];
                 let render_chunk = RenderChunk{
                     vertex_conf: *vertex_configration,
                     vertex_buffer: vertex_buffer,
-                    index_buffer: index_buffer,
-                    sprite_buffer: sprite_buffer,
-                    num_indices: 6,   //this is because a sprite consists of 2 triangles at the moment. If this changes and can be dynamically set, this should be updated
+                    instance_buffer: instance_buffer,   //this is because a sprite consists of 2 triangles at the moment. If this changes and can be dynamically set, this should be updated
                 };
                 render_ops.push(render_chunk);
             }
@@ -187,9 +186,6 @@ impl Renderer {
         let lock = block_on(async {
             self.objects.as_ref().unwrap().read().await
         });
-        println!("objects size: {}", lock.len());
-
-        println!("chunk size: {}", chunk_raw_vec.len());
 
         //the surface is the inner part of the window, the output (surfaceTexture) is the actual texture that we will render to
         let output = self.surface.get_current_texture()?;
@@ -231,7 +227,7 @@ impl Renderer {
                 render_pass.set_pipeline(&render_pipeline);   //the correct pipeline tells the GPU what shaders will be used on the vertices
                 render_pass.set_bind_group(0, bind_group, &[]);  //this bind group contains the textures we loaded, if we want to switch all of the textures at once, we can do that by switching to another bind group. Might create some interesting effects
                 render_pass.set_vertex_buffer(0, render_op.vertex_buffer.slice(..));
-                render_pass.set_vertex_buffer(1, render_op.sprite_buffer.instances_buffer.slice(..));
+                render_pass.set_vertex_buffer(1, render_op.instance_buffer.slice(..));
                 render_pass.set_index_buffer(render_op.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
                 render_pass.draw_indexed(0..render_op.num_indices, 0, 0..render_op.instances_len as u32);
             }
