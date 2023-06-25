@@ -23,6 +23,10 @@ impl DrawableObject for DebugHouse{
         self.position
     }
 
+    fn process_logic(&mut self, delta_time: f64) {
+        
+    }
+
     fn get_x_y_values(&self) -> (f32, f32) {
         (self.position.x, self.position.y)
     }

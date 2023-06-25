@@ -34,7 +34,14 @@ impl DrawableObject for Line{
         
     }
 
+    fn process_logic(&mut self, delta_time: f64) {
+        
+    }
+
     fn get_vertex_configuration(&self) -> &crate::rendering::sprites::vertex_configration::VertexConfigration {
-        todo!()
+       match self{
+            Line::Horizontal{position: _} => &crate::rendering::sprites::vertex_configration::VertexConfigration::LINE_HORIZONTAL,
+            Line::Vertical{position: _} => &crate::rendering::sprites::vertex_configration::VertexConfigration::LINE_VERTICAL,
+        } 
     }
 }
