@@ -17,15 +17,5 @@ pub(crate) trait DrawableObject: Debug + Send + Sync{
     //Consider making this interior mutable, in order to speed up access to these 
     fn process_animation(&mut self, delta_time: f64);
 
-    #[inline(always)]
-    fn vertices(&self) -> Vec<Vertex>{
-        vec![            
-        Vertex { position: [0.5, -0.5], tex_coords: [1.0, 1.0]}, // A
-        Vertex { position: [0.5, 0.5], tex_coords: [1.0, 0.0]}, // B
-        Vertex { position: [-0.5, 0.5], tex_coords: [0.0, 0.0] }, // C
-        Vertex { position: [-0.5, -0.5], tex_coords: [0.0, 1.0] }, // D]
-        ]
-    }
-
     fn get_vertex_configuration(&self) -> &VertexConfigration;
 }

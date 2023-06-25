@@ -42,13 +42,5 @@ impl DrawableObject for DebugHouse{
         &self.vertices
     }
 
-    fn vertices(&self) -> Vec<Vertex>{
-        vec![            
-        Vertex { position: [0.5, -0.5], tex_coords: [1.0, 1.0]}, // A
-        Vertex { position: [0.5, 0.5], tex_coords: [1.0, 0.0]}, // B
-        Vertex { position: [-0.5, 0.5], tex_coords: [0.0, 0.0] }, // C
-        Vertex { position: [-0.5, -0.5], tex_coords: [0.0, 1.0] }, // D]
-        ]
-    }
 
 }
