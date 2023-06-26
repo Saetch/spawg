@@ -1,4 +1,4 @@
-use crate::{game_objects::game_object::DrawableObject, controller::position::Position, rendering::sprites::sprite_mapping::Sprite};
+use crate::{game_objects::game_object::DrawableObject, controller::position::Position, rendering::sprites::sprite_mapping::Sprite, model::results::LogicResult};
 
 
 #[derive(Debug)]
@@ -34,8 +34,9 @@ impl DrawableObject for Line{
         
     }
 
-    fn process_logic(&mut self, delta_time: f64) {
-        
+    #[inline(always)]
+    fn process_logic(&mut self, delta_time: f64) -> LogicResult{
+        return LogicResult::None;
     }
 
     fn get_vertex_configuration(&self) -> &crate::rendering::sprites::vertex_configration::VertexConfigration {

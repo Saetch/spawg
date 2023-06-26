@@ -1,4 +1,6 @@
-use crate::{game_objects::game_object::{self, DrawableObject}, controller::position::Position, rendering::{sprites::{sprite_mapping::Sprite, vertex_configration::VertexConfigration}, vertex::Vertex}};
+use log::Log;
+
+use crate::{game_objects::game_object::{self, DrawableObject}, controller::position::Position, rendering::{sprites::{sprite_mapping::Sprite, vertex_configration::VertexConfigration}, vertex::Vertex}, model::results::LogicResult};
 #[derive(Debug)]
 pub(crate) struct DebugHouse{
     pub(crate) texture: Sprite,
@@ -23,8 +25,9 @@ impl DrawableObject for DebugHouse{
         self.position
     }
 
-    fn process_logic(&mut self, delta_time: f64) {
-        
+    #[inline(always)]
+    fn process_logic(&mut self, delta_time: f64) ->LogicResult {
+        LogicResult::None
     }
 
     fn get_x_y_values(&self) -> (f32, f32) {

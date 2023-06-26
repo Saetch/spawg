@@ -1,40 +1,26 @@
 use std::{sync::{atomic::{AtomicBool, Ordering}}, os::windows::thread, time::Duration, future::Future};
 
-use crate::{game_objects::{game_object::DrawableObject, static_object::StaticObject, buildings::debug_house::DebugHouse}, controller::{position::Position, controller_commands::ControllerCommand}, rendering::sprites::{sprite_mapping::Sprite, vertex_configration::VertexConfigration}};
+use crate::{game_objects::{game_object::{DrawableObject, LogicObject}, static_object::StaticObject, buildings::debug_house::DebugHouse}, controller::{position::Position, controller_commands::ControllerCommand}, rendering::sprites::{sprite_mapping::Sprite, vertex_configration::VertexConfigration}};
 use async_std::{sync::{Arc, RwLock as AsyncRwLock}};
 use flume::Receiver;
 
 //these types are just shorthand for the long type names, making it more easy to assess them
 pub(crate) type GameObjectList = Arc<AsyncRwLock<Vec<Arc<AsyncRwLock<dyn DrawableObject + Send + Sync >>>>>;
 pub(crate) type StaticObjectList = Arc<AsyncRwLock<Vec<StaticObject>>>;
-type GameState = Arc<AsyncRwLock<dyn GameStateTrait>>;
+pub(crate) type LogicObjects = Vec<Arc<AsyncRwLock<dyn LogicObject >>>;
 
 pub(crate) struct Model{
     pub(crate) running: Arc<AtomicBool>,  //<-- this is used to indicate whether the program should exit or not
     pub game_objects: GameObjectList,
     pub static_objects: StaticObjectList,
+    pub(crate) logic_objects: Option<LogicObjects>,
+
+
     controller_receiver: Receiver<ControllerCommand>,
     pub state: i32,
     pub logic_function: fn(&mut Self, delta_time: Duration),
-    game_state: GameState
+    
 }
-
-
-//the trait that all different game states should implement, the SEND + SYNC is needed to be able to send the game state between threads
-pub(crate) trait GameStateTrait: Send + Sync{
-    fn update(&mut self, delta_time: Duration);
-}
-
-struct MazeGameState{
-
-}
-
-impl GameStateTrait for MazeGameState{
-    fn update(&mut self, delta_time: Duration){
-
-    }
-}
-
 
 
 impl Model{
@@ -46,7 +32,7 @@ impl Model{
             controller_receiver: controller_to_model_receiver,
             state: 0,
             logic_function: Self::empty,
-            game_state: Arc::new(AsyncRwLock::new(MazeGameState{})),
+            logic_objects: None,
         }
     }
 
@@ -89,6 +75,12 @@ impl Model{
     #[inline(always)]
      fn maze_logic(&mut self, delta_time: Duration){
         println!("Model thread maze logic. Time elapsed: {}", delta_time.as_secs_f32());
+    }
+
+
+    #[inline(always)]
+    fn gravity_logic(&mut self, delta_time: Duration){
+        println!("Model thread gravity logic");
     }
 
 
