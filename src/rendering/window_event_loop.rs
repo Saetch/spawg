@@ -60,7 +60,7 @@ impl Renderer {
                     controller_sender.send(ControllerInput::Exit).expect("Could not send exit info to controller thread!");
                     //now we wait for the other threads to finish, before we finally close the program completely we cannot just use for handles in join_handles, because they would still exist, but be captured by the move closure, which would be a problem
                     join_handles.drain(..).for_each(|join_handle| {
-                        join_handle.join().unwrap();
+                        join_handle.join();
                     });
 
                     println!("Gracefully exiting ...");

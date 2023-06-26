@@ -75,6 +75,7 @@ impl CamOrganizer{
                 if dummy_counter > 3{
                     println!("FPS: {}", current_fps.unwrap());
                     dummy_counter = 0;
+                    //println!("render ops: {:?}", cell.borrow());
                 }
             }
             let res = self.sender.send(Rc::try_unwrap(cell).unwrap().into_inner());

@@ -8,13 +8,8 @@ use super::model::Model;
 
 impl Model{
 
-    async fn add_object(&self, object: Arc<RwLock<dyn DrawableObject + Send + Sync>>){
-        let mut lock = self.game_objects.write().await;
-        lock.push(object);
-    }
-
-    pub(crate) async fn spawn_house_at_position(&self, pos: (f32, f32)){
-        let mut lock = self.game_objects.write().await;
-        lock.push(Arc::new(RwLock::new(DebugHouse::new(Sprite::DwarfBaseHouse, Position::new(pos.0, pos.1), VertexConfigration::SQUARE_SMALL_1))));
+    pub(crate) async fn spawn_house_at_position(&mut self, pos: (f32, f32)){
+        let house = DebugHouse::new(Sprite::DwarfBaseHouse, Position::new(pos.0, pos.1), VertexConfigration::SQUARE_SMALL_1);
+        self.add_game_object(Arc::new(RwLock::new(house)));
     }
 }

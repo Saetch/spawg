@@ -28,11 +28,12 @@ pub async fn main() {
     let running = Arc::new(running);
 
 
+    //model is not completely Send, which means we cannot send it between threads and thus we need to create the shared states beforehand and create the model in the thread
+    let game_objects = Arc::new(async_std::sync::RwLock::new(Vec::new()));
+    let game_objects_clone = game_objects.clone();
     //spawn the model thread
-    let mut model = Model::new(running.clone(), controller_to_model_receiver);
-    let game_objects = model.game_objects.clone();
-
     let model_thread = thread::spawn(move || { 
+        let mut model = Model::new( controller_to_model_receiver, game_objects_clone);
         block_on(model.run());
     });
     join_handles_vec.push(model_thread);

@@ -6,7 +6,7 @@ pub(crate) struct DebugHouse{
     pub(crate) texture: Sprite,
     pub position: Position,
     pub vertices: VertexConfigration,
-
+    id : u64,
 }
 
 
@@ -16,6 +16,7 @@ impl DebugHouse {
             texture,
             position,
             vertices,
+            id: 0,
         }
     }
 }
@@ -48,6 +49,16 @@ impl DrawableObject for DebugHouse{
     fn get_vertex_configuration(&self) -> &VertexConfigration {
         &self.vertices
     }
+
+    fn get_id(&self) -> u64 {
+        self.id
+    }
+
+    fn set_id(&mut self, id: u64) {
+        self.id = id;
+    }
+
+    
 
 
 }

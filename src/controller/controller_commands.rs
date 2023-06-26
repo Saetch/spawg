@@ -9,4 +9,5 @@ pub(crate) enum ControllerCommand{
 
 
     LoadLevel(Level),
+    Shutdown,
 }

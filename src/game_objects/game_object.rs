@@ -18,9 +18,15 @@ pub(crate) trait DrawableObject: Debug + Send + Sync {
     fn process_animation(&mut self, delta_time: f64);
     fn process_logic(&mut self, delta_time: f64) -> LogicResult;
     fn get_vertex_configuration(&self) -> &VertexConfigration;
+
+
+    fn get_id(&self) -> u64;
+    fn set_id(&mut self, id: u64);
 }
 
 
 pub(crate) trait LogicObject: Debug{
     fn process_logic(&mut self, delta_time: Duration) -> LogicResult;
+    fn set_id(&mut self, id: u32);
+    fn get_id(&self) -> u32;
 }

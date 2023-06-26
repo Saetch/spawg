@@ -52,7 +52,7 @@ impl Controller{
 
 
     pub(crate) async fn run(&mut self){
-        self.model_sender.send(ControllerCommand::LoadLevel(Level::Initial)).unwrap();   //here we define what level should start. We use the controller for that, just because it is supposed to later decide what level to load anyways
+        self.model_sender.send(ControllerCommand::LoadLevel(Level::Maze)).unwrap();   //here we define what level should start. We use the controller for that, just because it is supposed to later decide what level to load anyways
 
 
         let mut personal_running_bool = true;       //we dont need a shared value, as we get notified of a shutdown via the channel
@@ -61,6 +61,7 @@ impl Controller{
             match received{
                 ControllerInput::Exit => {
                     personal_running_bool = false;
+                    self.model_sender.send(ControllerCommand::Shutdown).unwrap();
                 }
                 ControllerInput::MouseInput { action } =>  self.handle_mouse_input(action),
                 ControllerInput::KeyboardInput { key, state } =>  self.handle_keyboard_input(key).await,
