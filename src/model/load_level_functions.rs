@@ -32,7 +32,7 @@ impl Model{
        
         
         //create a Maze
-        let (maze, to_add_objects ) = Maze::new(22, 40, (-10.0, -5.0));
+        let (maze, to_add_objects ) = Maze::new(3, 3, (-10.0, -5.0));
 
         self.add_logic_object(Box::new(maze));
         self.add_game_objects(to_add_objects).await;

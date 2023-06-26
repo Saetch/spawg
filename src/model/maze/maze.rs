@@ -7,7 +7,7 @@ use crate::{game_objects::{game_object::{DrawableObject, LogicObject}, debug::li
 
 
 const DISTANCE_BETWEEN_TILES: f32 = 0.48;
-const TIME_BETWEEN_STEPS_IN_MS : u32 = 1;
+const TIME_BETWEEN_STEPS_IN_MS : u32 = 1000;
 
 #[derive(Debug)]
 pub(crate) struct Maze{
@@ -219,19 +219,36 @@ impl Maze{
         if tile_weak.ptr_eq(&self.end_tile){
             tile.connected.1 = true;   
         }
+        println!("Tile: {},{} has connections: {:?}", tile.position.0, tile.position.1, tile.connected);
         return possible_directions;
     }
 
     fn set_connection(&self, tile: &mut RefMut<MazeTile>, directions: &[Option<Weak<RefCell<MazeTile>>>; 4]){
+
+        println!("New connection setting ... neighbors ... ! For tile: {},{}", tile.position.0, tile.position.1);
+        for dir in 0..4{
+            if let Some(neighbor) = &directions[dir]{
+                let upgrade = neighbor.upgrade().unwrap();
+                let pos = upgrade.borrow().position;
+                println!("{} - {} / {}", dir, pos.0, pos.1);
+            }else{
+                println!("{} - None", dir);
+            }
+        }
+
         let path = self.current_path.as_ref().unwrap();
         let len = path.len();
-        let previous_id = len -2;
+        let mut previous_tile = None;
+        if len > 1{
+            let previous_id = len -2;
+            previous_tile = path.get(previous_id);
+        }
 
-        let previous_tile = path.get(previous_id);
 
         if let Some(neighbor) = &directions[0]{
             let upgrade = neighbor.upgrade().unwrap();
             let connected = upgrade.borrow().connected.2 && upgrade.borrow().visited;
+            println!("Neighbor 0: {} / {}",  upgrade.borrow().position.0, upgrade.borrow().position.1);
             tile.connected.0 = connected;
             drop(upgrade);
             if previous_tile.is_some(){
@@ -244,11 +261,12 @@ impl Maze{
         if let Some(neighbor) = &directions[1]{
             let upgrade = neighbor.upgrade().unwrap();
             let connected = upgrade.borrow().connected.3 && upgrade.borrow().visited;
+            println!("Neighbor 1: {} / {}",  upgrade.borrow().position.0, upgrade.borrow().position.1);
             tile.connected.1 = connected;
             drop(upgrade);
             if previous_tile.is_some(){
                 if neighbor.ptr_eq(previous_tile.unwrap()){
-                    tile.connected.0 = true;
+                    tile.connected.1 = true;
                 }
             }
         }
@@ -256,10 +274,11 @@ impl Maze{
             let upgrade = neighbor.upgrade().unwrap();
             let connected = upgrade.borrow().connected.0 && upgrade.borrow().visited;
             tile.connected.2 = connected;
+            println!("Neighbor 2: {} / {}",  upgrade.borrow().position.0, upgrade.borrow().position.1);
             drop(upgrade);
             if previous_tile.is_some(){
                 if neighbor.ptr_eq(previous_tile.unwrap()){
-                    tile.connected.0 = true;
+                    tile.connected.2 = true;
                 }
             }
         }
@@ -267,10 +286,11 @@ impl Maze{
             let upgrade = neighbor.upgrade().unwrap();
             let connected = upgrade.borrow().connected.1 && upgrade.borrow().visited;
             tile.connected.3 = connected;
+            println!("Neighbor 3: {} / {}",  upgrade.borrow().position.0, upgrade.borrow().position.1);
             drop(upgrade);
             if previous_tile.is_some(){
                 if neighbor.ptr_eq(previous_tile.unwrap()){
-                    tile.connected.0 = true;
+                    tile.connected.3 = true;
                 }
             }
         }
