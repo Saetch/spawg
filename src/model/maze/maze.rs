@@ -87,7 +87,7 @@ impl Maze{
             width: width,
             height: height,
             current_path: Some(Vec::new()),
-            next_tile_ms: 5000,
+            next_tile_ms: 2000,
             start_tile: start_tile,
             end_tile: end_tile,            
          };

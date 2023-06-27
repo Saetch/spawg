@@ -75,9 +75,11 @@ impl CamOrganizer{
                 if dummy_counter > 3{
                     println!("FPS: {}", current_fps.unwrap());
                     dummy_counter = 0;
+                    println!("objects: {}", lock.len());
                     //println!("render ops: {:?}", cell.borrow());
                 }
             }
+            drop(lock);
             let res = self.sender.send(Rc::try_unwrap(cell).unwrap().into_inner());
             if let Err(e) = res{
                 println!("Could not send rendering info to renderer thread: {}", e);
