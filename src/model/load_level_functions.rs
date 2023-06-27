@@ -32,7 +32,7 @@ impl Model{
        
         
         //create a Maze
-        let (maze, to_add_objects ) = Maze::new(23, 41, (-10.0, -5.0));
+        let (maze, to_add_objects ) = Maze::new(43, 24, (-10.0, -5.0));
         let background_square = DebugHouse::new(Sprite::DarkBlue, Position { x: 1241.2, y: 1231.1 }, VertexConfigration::NEARLY_SQUARE_RECTANGLE_0);
         self.add_game_object(Arc::new(RwLock::new(background_square))).await;
         self.add_logic_object(Box::new(maze));

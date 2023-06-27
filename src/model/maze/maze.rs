@@ -68,10 +68,10 @@ impl Maze{
 
 
         //set the correct positions for the MazeTiles
-        for i in 0..height{
+        for i in 0..width{
             let column = Vec::with_capacity(height);
             maze.push(column);
-            for j in 0..width{
+            for j in 0..height{
                 let tile = MazeTile{position_offset: position, position: (i, j),connected:(true,true,true,true),visited:false, underlying_objects: [None, None, None, None]};
                 let refr = Rc::new(RefCell::new(tile));
                 maze[i].push(refr);
@@ -80,7 +80,7 @@ impl Maze{
 
 
         let start_tile= Rc::downgrade(&maze[0][0].clone());
-        let end_tile= Rc::downgrade(&maze[height-1][width-1].clone());
+        let end_tile= Rc::downgrade(&maze[width-1][height-1].clone());
         let mut maze = Maze { 
             id: 0,
             maze: maze,
@@ -97,7 +97,7 @@ impl Maze{
         //set left of 0,0 and right of width-1, height-1 to true, these are the start and end points
         RefCell::borrow_mut(&maze.maze[0][0]).connected.3 = true;
 
-        RefCell::borrow_mut(&maze.maze[height-1][width-1]).connected.1 = true;
+        RefCell::borrow_mut(&maze.maze[width-1][height-1]).connected.1 = true;
 
         let objects = maze.generate_maze_objects(); 
 
@@ -106,8 +106,8 @@ impl Maze{
 
     fn generate_maze_objects(&self) -> GameObjects{
         let mut objects = GameObjects::new();
-        for i in 0..self.height{
-            for j in 0..self.width{
+        for i in 0..self.width{
+            for j in 0..self.height{
                 let tile = self.maze[i][j].clone();
                 let mut tile = tile.borrow_mut();
                 let tile_objects = tile.update_underlying_objects();
@@ -122,13 +122,13 @@ impl Maze{
    
     //set the outsides of the maze to false
     fn set_outside_walls(&mut self){
-        for j in 0..self.width{
+        for j in 0..self.height{
             RefCell::borrow_mut(&self.maze[0][j]).connected.3 = false;
-            self.maze[self.height-1][j].borrow_mut().connected.1 = false;
+            self.maze[self.width-1][j].borrow_mut().connected.1 = false;
         }
-        for i in 0..self.height{
+        for i in 0..self.width{
             self.maze[i][0].borrow_mut().connected.2 = false;
-            self.maze[i][self.width-1].borrow_mut().connected.0 = false;
+            self.maze[i][self.height-1].borrow_mut().connected.0 = false;
         }
     }
 
