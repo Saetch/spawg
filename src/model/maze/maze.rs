@@ -7,7 +7,7 @@ use crate::{game_objects::{game_object::{DrawableObject, LogicObject}, debug::li
 
 
 const DISTANCE_BETWEEN_TILES: f32 = 0.48;
-const TIME_BETWEEN_STEPS_IN_MS : u32 = 1000;
+const TIME_BETWEEN_STEPS_IN_MS : u32 = 45;
 
 #[derive(Debug)]
 pub(crate) struct Maze{
@@ -36,6 +36,14 @@ impl LogicObject for Maze{
         }else{
             self.next_tile_ms = TIME_BETWEEN_STEPS_IN_MS - (overtime);
         }
+
+        for i in 0 .. self.maze.len(){
+            for j in 0 .. self.maze[i].len(){
+                let tile = self.maze[i][j].borrow_mut();
+            }
+        }
+
+
         //if we have no path, we need to find one
         let ret = self.find_path_step();
         ret
@@ -79,7 +87,7 @@ impl Maze{
             width: width,
             height: height,
             current_path: Some(Vec::new()),
-            next_tile_ms: 0,
+            next_tile_ms: 5000,
             start_tile: start_tile,
             end_tile: end_tile,            
          };
@@ -132,8 +140,8 @@ impl Maze{
                 let rc = self.maze[0][0].clone();
                 let weak = Rc::downgrade(&rc);
                 path.push(weak.clone());
-                self.visit_tile(&weak);
-                let (to_add, to_remove) = weak.upgrade().unwrap().borrow_mut().update_underlying_objects();
+                let possible_neighbors = self.visit_tile(&weak);
+                let (to_add, to_remove) = weak.upgrade().unwrap().borrow_mut().update_underlying_objects_with_prev_ref(possible_neighbors);
                 return LogicResult::CreateAndDestroyGameObjects { game_objects_to_create: to_add, game_objects_to_destroy: to_remove };
             }
             else{
@@ -219,81 +227,46 @@ impl Maze{
         if tile_weak.ptr_eq(&self.end_tile){
             tile.connected.1 = true;   
         }
-        println!("Tile: {},{} has connections: {:?}", tile.position.0, tile.position.1, tile.connected);
         return possible_directions;
     }
 
     fn set_connection(&self, tile: &mut RefMut<MazeTile>, directions: &[Option<Weak<RefCell<MazeTile>>>; 4]){
 
-        println!("New connection setting ... neighbors ... ! For tile: {},{}", tile.position.0, tile.position.1);
         for dir in 0..4{
             if let Some(neighbor) = &directions[dir]{
                 let upgrade = neighbor.upgrade().unwrap();
                 let pos = upgrade.borrow().position;
-                println!("{} - {} / {}", dir, pos.0, pos.1);
-            }else{
-                println!("{} - None", dir);
             }
         }
-
+        let mut previous_tile_position = None;
         let path = self.current_path.as_ref().unwrap();
         let len = path.len();
         let mut previous_tile = None;
         if len > 1{
             let previous_id = len -2;
             previous_tile = path.get(previous_id);
+            previous_tile_position = Some(previous_tile.unwrap().upgrade().unwrap().borrow().position);
         }
+        
 
+        tile.connected = (false, false, false, false);
 
-        if let Some(neighbor) = &directions[0]{
-            let upgrade = neighbor.upgrade().unwrap();
-            let connected = upgrade.borrow().connected.2 && upgrade.borrow().visited;
-            println!("Neighbor 0: {} / {}",  upgrade.borrow().position.0, upgrade.borrow().position.1);
-            tile.connected.0 = connected;
-            drop(upgrade);
-            if previous_tile.is_some(){
-                if neighbor.ptr_eq(previous_tile.unwrap()){
-                    tile.connected.0 = true;
-                }
+        if let Some(prev) = previous_tile_position{
+            if !(tile.position.0 == self.width) && prev.0 == tile.position.0 + 1{
+                tile.connected.1 = true;
+            }
+            if !(tile.position.0 == 0) && prev.0 == tile.position.0 - 1{
+                tile.connected.3 = true;
+            }
+            if !(tile.position.1 == self.height) && prev.1 == tile.position.1 + 1{
+                tile.connected.0 = true;
+            }
+            if !(tile.position.1 == 0) && prev.1 == tile.position.1 - 1{
+                tile.connected.2 = true;
             }
 
         }
-        if let Some(neighbor) = &directions[1]{
-            let upgrade = neighbor.upgrade().unwrap();
-            let connected = upgrade.borrow().connected.3 && upgrade.borrow().visited;
-            println!("Neighbor 1: {} / {}",  upgrade.borrow().position.0, upgrade.borrow().position.1);
-            tile.connected.1 = connected;
-            drop(upgrade);
-            if previous_tile.is_some(){
-                if neighbor.ptr_eq(previous_tile.unwrap()){
-                    tile.connected.1 = true;
-                }
-            }
-        }
-        if let Some(neighbor) = &directions[2]{
-            let upgrade = neighbor.upgrade().unwrap();
-            let connected = upgrade.borrow().connected.0 && upgrade.borrow().visited;
-            tile.connected.2 = connected;
-            println!("Neighbor 2: {} / {}",  upgrade.borrow().position.0, upgrade.borrow().position.1);
-            drop(upgrade);
-            if previous_tile.is_some(){
-                if neighbor.ptr_eq(previous_tile.unwrap()){
-                    tile.connected.2 = true;
-                }
-            }
-        }
-        if let Some(neighbor) = &directions[3]{
-            let upgrade = neighbor.upgrade().unwrap();
-            let connected = upgrade.borrow().connected.1 && upgrade.borrow().visited;
-            tile.connected.3 = connected;
-            println!("Neighbor 3: {} / {}",  upgrade.borrow().position.0, upgrade.borrow().position.1);
-            drop(upgrade);
-            if previous_tile.is_some(){
-                if neighbor.ptr_eq(previous_tile.unwrap()){
-                    tile.connected.3 = true;
-                }
-            }
-        }
+        
     }
 
 
@@ -311,10 +284,10 @@ impl Maze{
         }
         
         let (x, y) = tile.position;
-        if direction == 0 && x == (self.maze.len() - 1){
+        if direction == 0 && x == (self.maze.len() ){
             return None;
         }
-        if direction == 1 && y == (self.maze[0].len() - 1){
+        if direction == 1 && y == (self.maze[0].len() ){
             return None;
         }
         if direction == 3 && x == 0{
@@ -375,6 +348,7 @@ impl MazeTile{
         let current_object = self.underlying_objects[0].clone();
         let actual_x = self.position.0 as f32 * DISTANCE_BETWEEN_TILES + self.position_offset.0;
         let actual_y = self.position.1 as f32 * DISTANCE_BETWEEN_TILES + self.position_offset.1;
+
         if let Some(object) = current_object{
             if self.connected.0{
                 let obj_id = object.try_read().unwrap().get_id();
@@ -441,16 +415,18 @@ impl MazeTile{
     fn update_underlying_objects_with_prev_ref(&mut self, neighbours : [Option<Weak<RefCell<MazeTile>>>;4]) -> (GameObjects, Vec<u64>){
         let mut to_add: Vec<Arc<RwLock<dyn DrawableObject + Send + Sync>>> = Vec::new();
         let mut to_remove: Vec<u64> = Vec::new();
+
         //process top
         let current_object = self.underlying_objects[0].clone();
         let actual_x = self.position.0 as f32 * DISTANCE_BETWEEN_TILES + self.position_offset.0;
         let actual_y = self.position.1 as f32 * DISTANCE_BETWEEN_TILES + self.position_offset.1;
+
+
+        
+        let background_square = DebugHouse::new(Sprite::Green, Position { x: actual_x, y: actual_y}, VertexConfigration::NEARLY_SQUARE_RECTANGLE_0);
+        to_add.push(Arc::new(RwLock::new(background_square)));
         if let Some(object) = current_object{
-            if self.connected.0{
-                let obj_id = object.try_read().unwrap().get_id();
-                to_remove.push(obj_id);
-                self.underlying_objects[0] = None;
-            }
+
         }else{
             if !self.connected.0{
                 let object = Arc::new(RwLock::new(Line::Horizontal { position: Position::new(actual_x, actual_y+ DISTANCE_BETWEEN_TILES /2.0 ), id: 0 }));
@@ -464,10 +440,7 @@ impl MazeTile{
         let current_object = self.underlying_objects[1].clone();
        //process right
         if let Some(object) = current_object{
-            if self.connected.1{
-                let obj_id = object.try_read().unwrap().get_id();
-                to_remove.push(obj_id);                self.underlying_objects[1] = None;
-            }
+
         }else{
             if !self.connected.1{
                 let object = Arc::new(RwLock::new(Line::Vertical { position: Position::new(actual_x + DISTANCE_BETWEEN_TILES/2.0, actual_y), id: 0 }));
@@ -478,10 +451,7 @@ impl MazeTile{
         let current_object = self.underlying_objects[3].clone();
         //process bottom
         if let Some(object) = current_object{
-            if self.connected.2{
-                let obj_id = object.try_read().unwrap().get_id();
-                to_remove.push(obj_id);                self.underlying_objects[2] = None;
-            }
+
         }else{
             if !self.connected.2{
                 let object = Arc::new(RwLock::new(Line::Horizontal { position: Position::new(actual_x, actual_y - DISTANCE_BETWEEN_TILES/2.0), id: 0 }));
@@ -492,10 +462,7 @@ impl MazeTile{
         //process left
         let current_object = self.underlying_objects[3].clone();
         if let Some(object) = current_object{
-            if self.connected.3{
-                let obj_id = object.try_read().unwrap().get_id();
-                to_remove.push(obj_id);                self.underlying_objects[3] = None;
-            }
+
         }else{
             if !self.connected.3{
                 let object = Arc::new(RwLock::new(Line::Vertical { position: Position::new(actual_x - DISTANCE_BETWEEN_TILES/2.0, actual_y), id: 0 }));
@@ -520,6 +487,7 @@ impl MazeTile{
                 let obj_id = tile.get_side_object_id(3);
                 if let Some(obj_id) = obj_id{
                     to_remove.push(obj_id);
+
                 }
             }
         }
@@ -530,6 +498,7 @@ impl MazeTile{
                 let obj_id = tile.get_side_object_id(0);
                 if let Some(obj_id) = obj_id{
                     to_remove.push(obj_id);
+
                 }
             }
         }
@@ -540,9 +509,11 @@ impl MazeTile{
                 let obj_id = tile.get_side_object_id(1);
                 if let Some(obj_id) = obj_id{
                     to_remove.push(obj_id);
+
                 }
             }
         }
+
 
         
 

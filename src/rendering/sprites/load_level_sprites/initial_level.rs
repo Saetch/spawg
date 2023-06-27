@@ -14,17 +14,19 @@ pub(crate) fn load_initial_level_sprites(renderer: &Renderer) ->  Vec<TextureVie
     let dwarf_base_house_texture_view2 = load_sprite_from_memory(&diffuse_bytes.as_slice(), 135,45, 380, 517, renderer);
     let diffuse_bytes = include_bytes!("../../../../textures/black_pixel.png");
     let black_pixel_texture_view = load_sprite_from_memory_uncropped(&diffuse_bytes.as_slice(), renderer);
+    let diffuse_bytes = include_bytes!("../../../../textures/Solid_blue_pixel_1x1.png");
+    let solid_blue_pixel_texture_view = load_sprite_from_memory_uncropped(&diffuse_bytes.as_slice(), renderer);
+    let diffuse_bytes = include_bytes!("../../../../textures/Solid_green_pixel_1x1.png");
+    let solid_green_pixel_texture_view = load_sprite_from_memory_uncropped(&diffuse_bytes.as_slice(), renderer);
 
-    
-        
     let mut texture_view_array = Vec::new();
 
 
     texture_view_array.push(dwarf_base_house_texture_view);
     texture_view_array.push(dwarf_base_house_texture_view2);
     texture_view_array.push(black_pixel_texture_view);
-    
-
+    texture_view_array.push(solid_blue_pixel_texture_view);
+    texture_view_array.push(solid_green_pixel_texture_view);
 
 
     texture_view_array

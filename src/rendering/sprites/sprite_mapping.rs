@@ -3,5 +3,7 @@
 pub(crate) enum Sprite {
     DwarfBaseHouse,
     DwarfBaseHousePixelated,
-    Black
+    Black,
+    DarkBlue,
+    Green,
 } 
