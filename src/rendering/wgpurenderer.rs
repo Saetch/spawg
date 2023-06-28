@@ -114,6 +114,8 @@ impl Renderer {
     }
 
 
+
+
     //this function is supposed to be used when the window is resized with a resize event and just adapts the configuration and configures the surface
     #[inline(always)]
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
