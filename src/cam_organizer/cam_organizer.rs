@@ -39,7 +39,6 @@ impl CamOrganizer{
         let mut loop_helper = spin_sleep::LoopHelper::builder()
         .report_interval_s(0.5) // report every half a second
         .build_with_target_rate(144.0);
-        let mut last_time = std::time::Instant::now();
         let mut current_fps = None;
 
         let mut dummy_counter = 0;
@@ -48,9 +47,15 @@ impl CamOrganizer{
 
             let delta = loop_helper.loop_start(); // or .loop_start_s() for f64 seconds.  This is just here to show and lock fps
 
+            if let Some(fps) = loop_helper.report_rate() {
+                    current_fps = Some(fps.round());
+                    dummy_counter += 1;
+                    if dummy_counter > 3{
+                        println!("FPS: {}", current_fps.unwrap());
+                        dummy_counter = 0;
+                }
 
-
-
+            }
             let f1 = self.compute_camera(delta);
             let f2 = self.cam_proportions.read();
             let (res, cam_proportions) = join!(f1, f2);
@@ -66,20 +71,12 @@ impl CamOrganizer{
                 let fut =  Self::process_object(obj, cell.clone(), &cam_prop, &x_os, &y_os);
                 futures_vec.push(fut);
             }
+
+
             join_all(futures_vec).await;
-            
-            //drop(lock);
-            if let Some(fps) = loop_helper.report_rate() {
-                current_fps = Some(fps.round());
-                dummy_counter += 1;
-                if dummy_counter > 3{
-                    println!("FPS: {}", current_fps.unwrap());
-                    dummy_counter = 0;
-                    println!("objects: {}", lock.len());
-                    //println!("render ops: {:?}", cell.borrow());
-                }
-            }
             drop(lock);
+            //drop(lock);
+
             let res = self.sender.send(Rc::try_unwrap(cell).unwrap().into_inner());
             if let Err(e) = res{
                 println!("Could not send rendering info to renderer thread: {}", e);
@@ -94,6 +91,7 @@ impl CamOrganizer{
     }
 
 
+#[inline(always)]
     async fn process_object(obj: &Arc<RwLock<dyn DrawableObject + Send + Sync>>, render_ops: Rc<RefCell<Vec<RenderChunk>>>, cam_prop: &(f32, f32), x_os: &f32, y_os: &f32) {
         let obj_lock = obj.read().await;
                 let texture_id = *obj_lock.get_texture() as u32;
@@ -124,6 +122,7 @@ impl CamOrganizer{
     }
 
 
+#[inline(always)]
     async fn compute_camera(&self, delta_ms: Duration) -> (f32, f32){
         let cam_directions = self.cam_directions.read().await;
         let mut cam_pos = self.cam_pos.write().await;

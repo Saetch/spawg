@@ -107,7 +107,6 @@ impl Controller{
 
 
     pub(crate) fn handle_mouse_input(&mut self, buttons: MouseInputType) {
-        println!("Got mouse input!");
         return;
         match buttons {
             MouseInputType::Move(x, y) => todo!(),
@@ -121,7 +120,6 @@ impl Controller{
 
     pub(crate) async fn handle_keyboard_input(&mut self, input: Option<VirtualKeyCode>, state: ElementState) {
         if let Some(key) = input {
-            println!("Got keyboard input!");
             match key {
                 VirtualKeyCode::Up => {
                     // Verarbeitung für Pfeiltaste nach oben
@@ -232,7 +230,6 @@ impl Controller{
                 _ => {}
             }
         }
-        print!("{:?}", self.cam_position);
     }
 
 
