@@ -133,14 +133,15 @@ impl CamOrganizer{
         let x_direction = match cam_directions.0{
             Direction::Positive => CAMERA_SPEED*1.0,
             Direction::Negative => CAMERA_SPEED*-1.0,
-            Direction::None => 0.0,
+            _ => 0.0,
+        
         };
         cam_pos.x += x_direction * delta_ms.as_millis() as f32 / 1000.0;
         //compute y direction
         let y_direction = match cam_directions.1{
             Direction::Positive => CAMERA_SPEED*1.0,
             Direction::Negative => CAMERA_SPEED*-1.0,
-            Direction::None => 0.0,
+            _ => 0.0,
         };
         cam_pos.y += y_direction * delta_ms.as_millis() as f32 / 1000.0;
 

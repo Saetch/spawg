@@ -1,21 +1,19 @@
 use std::{sync::{atomic::AtomicBool, Arc}, num::NonZeroU32};
 
 use wgpu::{Queue, Surface, Device, SurfaceConfiguration, RenderPipeline, util::DeviceExt, ShaderModule};
-use winit::{window::{Window, WindowBuilder}, event_loop::{EventLoop, self}, dpi::PhysicalSize};
+use winit::{window::{Window, WindowBuilder, Fullscreen}, event_loop::{EventLoop, self, EventLoopBuilder}, dpi::PhysicalSize, event::WindowEvent};
 
 use crate::controller::{position::Position, controller::SharablePosition};
 
 use super::{wgpurenderer::{Renderer}, vertex::Vertex};
 
 // Creating some of the wgpu types requires async code
-pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (Renderer, event_loop::EventLoop<()>) {
-    let event_loop = EventLoop::new();          //event loop is the basic loop of a window. A window needs one, otherwise it does nothing
+pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (Renderer, event_loop::EventLoop<WindowEvent<'static>>) {
+    let event_loop = EventLoopBuilder::<WindowEvent>::with_user_event().build();          //event loop is the basic loop of a window. A window needs one, otherwise it does nothing
     const FORMAT: f64 = 16.0 / 9.0;                  //the aspect ratio of the window
     let requested_size = PhysicalSize::new(1400, (1400.0 / FORMAT) as u32);
-    let window = WindowBuilder::new().with_inner_size(requested_size).build(&event_loop).unwrap();     //builds a window with the event loop. We could open multiple windows from a single program, but for now we don't need to
-
+    let window = WindowBuilder::new().with_inner_size(requested_size).with_title("spawg").build(&event_loop).unwrap();     //builds a window with the event loop. We could open multiple windows from a single program, but for now we don't need to
     let size = window.inner_size();
-
     // the instance is an actual wgpu object that we use to do everything in
     // Backends::all => Vulkan + Metal + DX12 + Browser WebGPU
     let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {

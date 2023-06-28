@@ -1,7 +1,9 @@
+use std::ops::Index;
 use std::sync::{Arc};
 use async_std::sync::RwLock;
 use flume::{Receiver, Sender};
-use winit::event::VirtualKeyCode;
+use winit::event::{VirtualKeyCode, ElementState};
+use winit::window::Window;
 use crate::controller::input::MouseInputType;
 use crate::model::load_level_functions::Level;
 use super::controller_commands::ControllerCommand;
@@ -23,17 +25,49 @@ pub(crate) struct Controller{
     pub(crate) cam_position: SharablePosition,
     pub(crate) cam_proportions: Arc<RwLock<(f32, f32)>>,
     pub(crate) cam_directions: Arc<RwLock<(Direction, Direction)>>,
-    
+    personal_running_bool:  bool,
     
     model_sender: Sender<ControllerCommand>,//<-- this is used to send messages to the model, the model is supposed to evaluate them and process accordingly
                                              //for example: self.model_sender.send(ControllerCommand::SpawnHouseAtPosition { spawn_position: (0.0, 0.0) }).unwrap();
     renderer_sender: Sender<RendererCommand>,
-}                                   
-             
+    modifiers: Modifiers,
+}
+
+pub(crate) enum Modifier{
+    Shift,
+    Ctrl,
+    Alt,
+    RAlt,
+}
+
+struct Modifiers{
+    modifiers: [bool; 4]
+}
+
+
+
+impl Modifiers{
+    fn new() -> Self{
+        Self{
+            modifiers: [false; 4]
+        }
+    }
+
+    fn set_modifier(&mut self, modifier: Modifier, state: bool){
+        self.modifiers[modifier as usize] = state;
+    }
+
+    fn get_modifier(&self, modifier: Modifier) -> bool{
+        self.modifiers[modifier as usize]
+    }
+}
+
+#[derive(PartialEq)]
 pub(crate) enum Direction{
+    None,
     Positive,
     Negative,
-    None,
+    Muted,  //<- this means that both directional keys are pressed, so the camera should not move, but return moving once one of the keys is released
 }
 
 
@@ -47,6 +81,8 @@ impl Controller{
             cam_proportions: Arc::new(RwLock::new((CAM_INITIAL_WIDTH, CAM_INITIAL_HEIGHT))),
             renderer_sender,
             cam_directions: Arc::new(RwLock::new((Direction::None, Direction::None))),
+            modifiers: Modifiers::new(),
+            personal_running_bool: true,
         }
     }
 
@@ -55,16 +91,15 @@ impl Controller{
         self.model_sender.send(ControllerCommand::LoadLevel(Level::Maze)).unwrap();   //here we define what level should start. We use the controller for that, just because it is supposed to later decide what level to load anyways
 
 
-        let mut personal_running_bool = true;       //we dont need a shared value, as we get notified of a shutdown via the channel
-        while personal_running_bool{
+        while self.personal_running_bool{
             let received = self.receiver.recv().unwrap();
             match received{
                 ControllerInput::Exit => {
-                    personal_running_bool = false;
+                    self.personal_running_bool = false;
                     self.model_sender.send(ControllerCommand::Shutdown).unwrap();
                 }
                 ControllerInput::MouseInput { action } =>  self.handle_mouse_input(action),
-                ControllerInput::KeyboardInput { key, state } =>  self.handle_keyboard_input(key).await,
+                ControllerInput::KeyboardInput { key, state } =>  self.handle_keyboard_input(key, state).await,
                 ControllerInput::WindowResized { dimensions } =>    println!("Got window resized!"),
             }
         }
@@ -84,30 +119,116 @@ impl Controller{
     }
 
 
-    pub(crate) async fn handle_keyboard_input(&mut self, input: Option<VirtualKeyCode>) {
+    pub(crate) async fn handle_keyboard_input(&mut self, input: Option<VirtualKeyCode>, state: ElementState) {
         if let Some(key) = input {
             println!("Got keyboard input!");
             match key {
                 VirtualKeyCode::Up => {
                     // Verarbeitung für Pfeiltaste nach oben
-                    let mut lock = self.cam_position.write().await;
-                    (*lock).y += 0.1;
+                    let mut lock = self.cam_directions.write().await;
+                    (*lock).1 = match state {
+                        ElementState::Pressed => match lock.1 {
+                            Direction::None => Direction::Positive,
+                            Direction::Negative => Direction::Muted,
+                            Direction::Positive => Direction::Positive,
+                            Direction::Muted => Direction::Muted,
+                        },
+                        ElementState::Released => match lock.1 {
+                            Direction::None => Direction::None,
+                            Direction::Negative => Direction::Negative,
+                            Direction::Positive => Direction::None,
+                            Direction::Muted => Direction::Negative,
+                        },
+                    };
                 }
                 VirtualKeyCode::Down => {
-                    let mut lock = self.cam_position.write().await;
                     // Verarbeitung für Pfeiltaste nach unten
-                    (*lock).y -= 0.1;
+                    let mut lock = self.cam_directions.write().await;
+                    (*lock).1 = match state {
+                        ElementState::Pressed => match lock.1 {
+                            Direction::None => Direction::Negative,
+                            Direction::Negative => Direction::Negative,
+                            Direction::Positive => Direction::Muted,
+                            Direction::Muted => Direction::Muted,
+                        },
+                        ElementState::Released => match lock.1 {
+                            Direction::None => Direction::None,
+                            Direction::Negative => Direction::None,
+                            Direction::Positive => Direction::Positive,
+                            Direction::Muted => Direction::Positive,
+                        },
+                    };
                 }
                 VirtualKeyCode::Left => {
                     // Verarbeitung für Pfeiltaste nach links
-                    let mut lock = self.cam_position.write().await;
-                    (*lock).x -= 0.1;
+                    let mut lock = self.cam_directions.write().await;
+                    (*lock).0 = match state {
+                        ElementState::Pressed => match lock.0{
+                            Direction::None => Direction::Negative,
+                            Direction::Negative => Direction::Negative,
+                            Direction::Positive => Direction::Muted,
+                            Direction::Muted => Direction::Muted,
+                        },
+                        ElementState::Released => match lock.0 {
+                            Direction::None => Direction::None,
+                            Direction::Negative => Direction::None,
+                            Direction::Positive => Direction::Positive,
+                            Direction::Muted => Direction::Positive,
+                        },
+
+                    };
                 }
                 VirtualKeyCode::Right => {
                     // Verarbeitung für Pfeiltaste nach rechts
-                    let mut lock = self.cam_position.write().await;
-                    (*lock).x += 0.1;
+                    let mut lock = self.cam_directions.write().await;
+                    (*lock).0 = match state {
+                        ElementState::Pressed => match lock.0 {
+                            Direction::None => Direction::Positive,
+                            Direction::Negative => Direction::Muted,
+                            Direction::Positive => Direction::Positive,
+                            Direction::Muted => Direction::Muted,
+                        },
+                        ElementState::Released => match lock.0 {
+                            Direction::None => Direction::None,
+                            Direction::Negative => Direction::Negative,
+                            Direction::Positive => Direction::None,
+                            Direction::Muted => Direction::Negative,
+                        },
+                    };
                 }
+                VirtualKeyCode::Escape => {
+                    // Verarbeitung für Escape-Taste
+                    self.model_sender.send(ControllerCommand::Shutdown).unwrap();
+                    self.renderer_sender.send(RendererCommand::SHUTDOWN).unwrap();
+                }
+                VirtualKeyCode::Return => {
+                    // Verarbeitung für Enter-Taste
+                    match state {
+                        ElementState::Pressed => {
+                            if self.modifiers.get_modifier(Modifier::Alt) || self.modifiers.get_modifier(Modifier::RAlt) {
+                                self.renderer_sender.send(RendererCommand::TOGGLE_FULLSCREEN).unwrap();
+                            }
+                        },
+                        _ => ()
+                    }                 
+                }
+                VirtualKeyCode::LAlt => {
+                    // Verarbeitung für Alt-Taste
+                    self.modifiers.set_modifier(Modifier::Alt, state == ElementState::Pressed);
+                }
+                VirtualKeyCode::LControl => {
+                    // Verarbeitung für Strg-Taste
+                    self.modifiers.set_modifier(Modifier::Ctrl, state == ElementState::Pressed);
+                }
+                VirtualKeyCode::LShift => {
+                    // Verarbeitung für Shift-Taste
+                    self.modifiers.set_modifier(Modifier::Shift, state == ElementState::Pressed);
+                }
+                VirtualKeyCode::RAlt => {
+                    // Verarbeitung für Alt-Taste
+                    self.modifiers.set_modifier(Modifier::RAlt, state == ElementState::Pressed);
+                }
+
                 _ => {}
             }
         }

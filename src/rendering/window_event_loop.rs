@@ -1,5 +1,6 @@
 use std::{sync::{atomic::AtomicBool, Arc}, thread::JoinHandle};
 
+use async_std::task::block_on;
 use flume::Receiver;
 use winit::{event::{Event, WindowEvent}, event_loop::{ControlFlow}};
 
@@ -19,10 +20,10 @@ impl Renderer {
         let (mut renderer, event_loop) = init(running, cam_pos).await;  //we cannot put the event_loop into the Renderer struct, as the .run() function requires a move, which takes ownership of the values in it. And it is not possible for a data field to take ownership of the struct it is in
         renderer.render_receiver = Some(renderer_receiver);
 
+        let event_loop_proxy: winit::event_loop::EventLoopProxy<WindowEvent> = event_loop.create_proxy();
 
         #[allow(unused)]
         let (mut render_pipeline, mut bind_group) = load_sprites(0, &renderer);
-        
         
         event_loop.run(move |event, _, control_flow| match event {
             Event::RedrawRequested(window_id) if window_id == renderer.window.id() => {
@@ -60,7 +61,7 @@ impl Renderer {
                     controller_sender.send(ControllerInput::Exit).expect("Could not send exit info to controller thread!");
                     //now we wait for the other threads to finish, before we finally close the program completely we cannot just use for handles in join_handles, because they would still exist, but be captured by the move closure, which would be a problem
                     join_handles.drain(..).for_each(|join_handle| {
-                        join_handle.join();
+                        join_handle.join().unwrap();
                     });
 
                     println!("Gracefully exiting ...");
@@ -135,6 +136,29 @@ impl Renderer {
             while let Ok(command) = controller_receiver.try_recv(){
                 match command {
                     RendererCommand::PLACEHOLDER => println!("Placeholder command received!"),
+                    RendererCommand::TOGGLE_FULLSCREEN => {let fullscreen = renderer.window.fullscreen().is_some();
+                        println!("Toggling fullscreen: {}", !fullscreen);
+                        if let Some(displ) = renderer.window().current_monitor(){
+                            if fullscreen {
+                                renderer.window.set_fullscreen(None);
+                            } else {
+                                renderer.window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(Some(displ))));
+                            }
+                        }
+                    },
+                    RendererCommand::SHUTDOWN => {
+
+                        //same logic as in CloseRequested
+                        renderer.render_receiver = None;
+                        renderer.running.store(false, std::sync::atomic::Ordering::SeqCst);
+                        controller_sender.send(ControllerInput::Exit).expect("Could not send exit info to controller thread!");
+                        //now we wait for the other threads to finish, before we finally close the program completely we cannot just use for handles in join_handles, because they would still exist, but be captured by the move closure, which would be a problem
+                        join_handles.drain(..).for_each(|join_handle| {
+                            join_handle.join().unwrap();
+                        });
+                        println!("Gracefully exiting ...");
+                        control_flow.set_exit();
+                    } ,
                 }
             }
         }
