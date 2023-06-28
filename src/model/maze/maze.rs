@@ -37,12 +37,6 @@ impl LogicObject for Maze{
             self.next_tile_ms = TIME_BETWEEN_STEPS_IN_MS - (overtime);
         }
 
-        for i in 0 .. self.maze.len(){
-            for j in 0 .. self.maze[i].len(){
-                let tile = self.maze[i][j].borrow_mut();
-            }
-        }
-
 
         //if we have no path, we need to find one
         let ret = self.find_path_step();
@@ -421,7 +415,6 @@ impl MazeTile{
         let actual_x = self.position.0 as f32 * DISTANCE_BETWEEN_TILES + self.position_offset.0;
         let actual_y = self.position.1 as f32 * DISTANCE_BETWEEN_TILES + self.position_offset.1;
 
-
         
         let background_square = DebugHouse::new(Sprite::Green, Position { x: actual_x, y: actual_y}, VertexConfigration::NEARLY_SQUARE_RECTANGLE_0);
         to_add.push(Arc::new(RwLock::new(background_square)));
@@ -448,12 +441,13 @@ impl MazeTile{
                 self.underlying_objects[1] = Some(object);
             }
         }
-        let current_object = self.underlying_objects[3].clone();
+        let current_object = self.underlying_objects[2].clone();
         //process bottom
         if let Some(object) = current_object{
 
         }else{
             if !self.connected.2{
+                
                 let object = Arc::new(RwLock::new(Line::Horizontal { position: Position::new(actual_x, actual_y - DISTANCE_BETWEEN_TILES/2.0), id: 0 }));
                 to_add.push(object.clone());
                 self.underlying_objects[2] = Some(object);
