@@ -421,12 +421,16 @@ impl MazeTile{
         if let Some(object) = current_object{
 
         }else{
-            if !self.connected.0{
+            if let Some(neighbor) = neighbours[0].as_ref(){
+                let upg = neighbor.upgrade().unwrap();
+                if !self.connected.0 && !upg.borrow().visited{
                 let object = Arc::new(RwLock::new(Line::Horizontal { position: Position::new(actual_x, actual_y+ DISTANCE_BETWEEN_TILES /2.0 ), id: 0 }));
                 //let object = Arc::new(RwLock::new(DebugHouse { position: Position::new(self.position.0 as f32, self.position.1 as f32), texture: Sprite::DwarfBaseHouse, vertices: VertexConfigration::SQUARE_SMALL_1 }));
                 to_add.push(object.clone());
                 self.underlying_objects[0] = Some(object);
             }
+            }
+
         }
 
 
@@ -435,10 +439,13 @@ impl MazeTile{
         if let Some(object) = current_object{
 
         }else{
-            if !self.connected.1{
-                let object = Arc::new(RwLock::new(Line::Vertical { position: Position::new(actual_x + DISTANCE_BETWEEN_TILES/2.0, actual_y), id: 0 }));
-                to_add.push(object.clone());
-                self.underlying_objects[1] = Some(object);
+            if let Some(neighbor) = neighbours[1].as_ref(){
+            let upg = neighbor.upgrade().unwrap();
+                if !self.connected.1 && !upg.borrow().visited{
+                    let object = Arc::new(RwLock::new(Line::Vertical { position: Position::new(actual_x + DISTANCE_BETWEEN_TILES/2.0, actual_y), id: 0 }));
+                    to_add.push(object.clone());
+                    self.underlying_objects[1] = Some(object);
+                }
             }
         }
         let current_object = self.underlying_objects[2].clone();
@@ -446,22 +453,28 @@ impl MazeTile{
         if let Some(object) = current_object{
 
         }else{
-            if !self.connected.2{
-                
-                let object = Arc::new(RwLock::new(Line::Horizontal { position: Position::new(actual_x, actual_y - DISTANCE_BETWEEN_TILES/2.0), id: 0 }));
-                to_add.push(object.clone());
-                self.underlying_objects[2] = Some(object);
-            }
+            if let Some(neighbor) = neighbours[2].as_ref(){
+            let upg = neighbor.upgrade().unwrap();
+                if !self.connected.2 && !upg.borrow().visited{
+                    
+                    let object = Arc::new(RwLock::new(Line::Horizontal { position: Position::new(actual_x, actual_y - DISTANCE_BETWEEN_TILES/2.0), id: 0 }));
+                    to_add.push(object.clone());
+                    self.underlying_objects[2] = Some(object);
+                }
+        }
         }
         //process left
         let current_object = self.underlying_objects[3].clone();
         if let Some(object) = current_object{
 
         }else{
-            if !self.connected.3{
-                let object = Arc::new(RwLock::new(Line::Vertical { position: Position::new(actual_x - DISTANCE_BETWEEN_TILES/2.0, actual_y), id: 0 }));
-                to_add.push(object.clone());
-                self.underlying_objects[3] = Some(object);
+            if let Some(neighbor) = neighbours[3].as_ref(){
+            let upg = neighbor.upgrade().unwrap();
+            if !self.connected.3 && !upg.borrow().visited{
+                    let object = Arc::new(RwLock::new(Line::Vertical { position: Position::new(actual_x - DISTANCE_BETWEEN_TILES/2.0, actual_y), id: 0 }));
+                    to_add.push(object.clone());
+                    self.underlying_objects[3] = Some(object);
+                }
             }
         }
         if self.connected.0 {
@@ -521,11 +534,10 @@ impl MazeTile{
             return None;
         }
         let dum = dum.unwrap();
-        while true {
+        loop {
             if let Some(obj) = dum.try_read(){
                 return Some(obj.get_id());
             }
         }
-        unreachable!()
     }
 }
