@@ -1,7 +1,17 @@
 {
     "rust-analyzer.linkedProjects": [
         ".\\Cargo.toml",
-        ".\\Cargo.toml",
-        ".\\Cargo.toml"
+    ],
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "shadered",
+            "request": "launch",
+            "name": "shadered.sprj",
+            "program": "${workspaceFolder}/project.sprj"
+        }
     ]
+    
+    
+    
 }

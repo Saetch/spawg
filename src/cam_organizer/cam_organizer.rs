@@ -106,7 +106,7 @@ impl CamOrganizer{
                         texture_id: texture_id,
                     });
                 }else{
-                    let vertex_buffer = Vec::from(vertex_configration.get_vertices((24, 14)));
+                    let vertex_buffer = Vec::from(vertex_configration.get_vertices());
                     let instance_buffer = 
                         vec![SpriteInstance {
                             position: [position.x/cam_prop.0-x_os, position.y/cam_prop.1-y_os],

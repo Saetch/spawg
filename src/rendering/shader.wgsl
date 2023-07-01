@@ -17,6 +17,13 @@ struct VertexOutput {
 
 };
 
+struct CameraSize {
+    values: vec2<f32>,
+}
+
+@group(1) @binding(0)
+var<uniform> cam_size: vec2<f32>;
+
 @vertex
 fn vs_main(
     model: VertexInput,
@@ -24,7 +31,7 @@ fn vs_main(
 ) -> VertexOutput {
     var out: VertexOutput;
     out.tex_coords = model.tex_coords;
-    out.clip_position = vec4<f32>(model.position + instance.sprite_position, 0.0, 1.0);
+    out.clip_position = vec4<f32>(model.position /(cam_size /2.0) + instance.sprite_position, 0.0, 1.0);
     out.tex_i = instance.tex_i;
     return out;
 }

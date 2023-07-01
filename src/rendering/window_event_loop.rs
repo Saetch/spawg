@@ -23,7 +23,7 @@ impl Renderer {
         let event_loop_proxy: winit::event_loop::EventLoopProxy<WindowEvent> = event_loop.create_proxy();
 
         #[allow(unused)]
-        let (mut render_pipeline, mut bind_group) = load_sprites(0, &renderer);
+        let (mut render_pipeline, mut bind_group, mut camera_bind_group) = load_sprites(0, &renderer);
         
         event_loop.run(move |event, _, control_flow| match event {
             Event::RedrawRequested(window_id) if window_id == renderer.window.id() => {
@@ -128,7 +128,7 @@ impl Renderer {
     
         }
         Event::MainEventsCleared => {
-            let res = renderer.render(&render_pipeline, &bind_group);
+            let res = renderer.render(&render_pipeline, &bind_group, &camera_bind_group);
             if let Err(e) = res {
                 eprintln!("Error during rendering: {:?}", e);
             }

@@ -23,7 +23,7 @@ pub struct Renderer {
     pub(crate) running: Arc<AtomicBool>,  //<-- this is used to indicate whether the program should exit or not
     pub(crate) shader: ShaderModule,
     pub(crate) render_receiver: Option<flume::Receiver<Vec<RenderChunk>>>,
-
+    pub(crate) index_buffer: wgpu::Buffer,
 }
 
 #[derive(Debug)]
@@ -32,12 +32,12 @@ pub struct RenderChunk{
     pub(crate) vertex_buffer: Vec<Vertex>,
     pub(crate) instance_buffer: Vec<SpriteInstance>,
 }
-pub struct RenderChunkRaw{
+pub struct RenderChunkRaw<'a>{
     pub(crate) vertex_buffer: wgpu::Buffer,
-    pub(crate) index_buffer: wgpu::Buffer,
     pub(crate) instance_buffer: wgpu::Buffer,
     pub(crate) num_indices: u32,
     pub(crate) instances_len: usize,
+    pub(crate) index_buffer: &'a wgpu::Buffer,
 }
 
 
@@ -88,20 +88,10 @@ impl Renderer {
     #[inline(always)]
     fn chunk_to_raw(&self, chunk: RenderChunk) -> RenderChunkRaw{
         let len = chunk.instance_buffer.len();
-        const INDICES: &[u16] = &[
-            0, 1, 2,  // Triangle ABC
-            0, 2, 3,  // Triangle ACD
-        ];
-        let index_buffer = self.device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Index Buffer"),
-                contents: bytemuck::cast_slice(&INDICES),
-                usage: wgpu::BufferUsages::INDEX,
-            }
-        );
+
         RenderChunkRaw{
             vertex_buffer: self.create_vertex_buffer_from_vector(chunk.vertex_buffer),
-            index_buffer: index_buffer,
+            index_buffer: &self.index_buffer,
             instance_buffer: self.create_instance_buffer_from_instance_vector(chunk.instance_buffer),
             num_indices: NUM_INDICES_PER_SPRITE,
             instances_len: len,
@@ -133,7 +123,7 @@ impl Renderer {
     }
 
     #[inline(always)]
-    pub(crate) fn render(&mut self, render_pipeline: &RenderPipeline, bind_group: &BindGroup) -> Result<(), wgpu::SurfaceError> {
+    pub(crate) fn render(&mut self, render_pipeline: &RenderPipeline, bind_group: &BindGroup, camera_bind_group: &BindGroup) -> Result<(), wgpu::SurfaceError> {
 
 
         if self.render_receiver.is_none(){
@@ -161,7 +151,7 @@ impl Renderer {
         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Render Encoder"),
         });
-
+        
         
         //these {} brackets are used, because begin_render_pass borrows encoder mutably and we need to return that borrow before we can call encoder.finish()
         {
@@ -190,6 +180,7 @@ impl Renderer {
 
                 render_pass.set_pipeline(&render_pipeline);   //the correct pipeline tells the GPU what shaders will be used on the vertices
                 render_pass.set_bind_group(0, bind_group, &[]);  //this bind group contains the textures we loaded, if we want to switch all of the textures at once, we can do that by switching to another bind group. Might create some interesting effects
+                render_pass.set_bind_group(1, camera_bind_group, &[]);
                 render_pass.set_vertex_buffer(0, render_op.vertex_buffer.slice(..));
                 render_pass.set_vertex_buffer(1, render_op.instance_buffer.slice(..));
                 render_pass.set_index_buffer(render_op.index_buffer.slice(..), wgpu::IndexFormat::Uint16);

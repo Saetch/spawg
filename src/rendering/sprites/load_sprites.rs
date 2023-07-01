@@ -1,13 +1,13 @@
-use std::{num::NonZeroU32, default};
+use std::{num::{NonZeroU32, NonZeroU64}, default};
 
-use wgpu::{TextureUsages, Device, RenderPipeline, BindGroup, ShaderModule, SurfaceConfiguration, TextureView};
+use wgpu::{TextureUsages, Device, RenderPipeline, BindGroup, ShaderModule, SurfaceConfiguration, TextureView, util::DeviceExt};
 
-use crate::rendering::{vertex::Vertex, wgpurenderer::Renderer, sprite_instance::SpriteInstance};
+use crate::{rendering::{vertex::Vertex, wgpurenderer::Renderer, sprite_instance::SpriteInstance}, controller::controller::{CAM_INITIAL_WIDTH, CAM_INITIAL_HEIGHT}};
 use image::{GenericImageView, ImageBuffer};
 use super::load_level_sprites::initial_level::load_initial_level_sprites;
 
 
-pub fn load_sprites(_i: u32, renderer: &Renderer) -> (RenderPipeline, BindGroup) {
+pub fn load_sprites(_i: u32, renderer: &Renderer) -> (RenderPipeline, BindGroup, BindGroup) {
         
 
         let texture_view_array = load_initial_level_sprites(renderer);
@@ -69,10 +69,53 @@ pub fn load_sprites(_i: u32, renderer: &Renderer) -> (RenderPipeline, BindGroup)
         );
 
         
+        let camera: CameraSize = CameraSize{
+            values: [CAM_INITIAL_WIDTH, CAM_INITIAL_HEIGHT],
+        };
+        
+        
+        let camera= [CAM_INITIAL_WIDTH, CAM_INITIAL_HEIGHT];
+        let uniform_camera_buffer = renderer.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Camera Buffer"),
+            contents: bytemuck::cast_slice(&[camera]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        
+
+        let camera_bind_group_layout = renderer.device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }
+            ],
+            label: Some("camera_bind_group_layout"),
+        });
+
+        
+        let camera_bind_group = renderer.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &camera_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding { buffer: &uniform_camera_buffer, offset: 0, size:None  }),
+                }
+            ],
+            label: Some("camera_bind_group"),
+        });
+
+        
         let render_pipeline_layout =
         renderer.device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Render Pipeline Layout"),
-            bind_group_layouts: &[&texture_bind_group_layout],
+            bind_group_layouts: &[&texture_bind_group_layout, &camera_bind_group_layout],
             push_constant_ranges: &[],
         });
 
@@ -116,12 +159,18 @@ pub fn load_sprites(_i: u32, renderer: &Renderer) -> (RenderPipeline, BindGroup)
             multiview: None, // 5.
         });
 
-        (render_pipeline, diffuse_bind_group)
+
+
+        (render_pipeline, diffuse_bind_group, camera_bind_group)
 }
 
 
 
-
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+pub(crate) struct CameraSize{
+    values: [f32; 2],
+}
 
 
 

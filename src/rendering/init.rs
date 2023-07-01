@@ -85,7 +85,17 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (
 
     //I thought at first to load the sprites here, but this is not a good idea, since we need to load them every time we change the sprite sheet
 
-
+    const INDICES: &[u16] = &[
+        0, 1, 2,  // Triangle ABC
+        0, 2, 3,  // Triangle ACD
+    ];
+    let index_buffer = device.create_buffer_init(
+        &wgpu::util::BufferInitDescriptor {
+            label: Some("Index Buffer"),
+            contents: bytemuck::cast_slice(&INDICES),
+            usage: wgpu::BufferUsages::INDEX,
+        }
+    );
 
 
 
@@ -102,6 +112,7 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (
             running,
             shader,
             render_receiver: None,
+            index_buffer,
         },
         event_loop
     )
