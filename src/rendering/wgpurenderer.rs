@@ -60,13 +60,20 @@ pub(crate) struct InstanceBufferState{
 }
 
 
+#[derive(Debug)]
+struct UpdateBufferStruct{
+    pub(crate) buffer: wgpu::Buffer,
+    pub(crate) offset: usize,
+}
+
+
 impl Renderer {
 
 
 
 
     #[inline(always)]
-    fn chunk_to_raw<'a>(&'a self, chunk: RenderChunk, current_override_len: usize) -> (RenderChunkRaw, Option<(Buffer, usize)>){
+    fn chunk_to_raw<'a>(&'a self, chunk: RenderChunk, current_override_len: usize) -> (RenderChunkRaw, Option<UpdateBufferStruct>){
         let len = chunk.instance_buffer.len();
         let id = chunk.vertex_conf as usize;
         let max_amount_to_render = self.vertex_structs[id].instance_state.num_instance_size.borrow().clone() as usize;
@@ -127,8 +134,8 @@ impl Renderer {
             }
         }
         
-        for (id, instances) in to_update_vec.iter(){
-            println!("updating instance buffer for vertex configuration list {:?}", instances);
+        for u in to_update_vec.iter(){
+            println!("updating instance buffer for vertex configuration list {:?}", u.offset);
         }
         
         //the surface is the inner part of the window, the output (surfaceTexture) is the actual texture that we will render to
@@ -211,7 +218,7 @@ impl Renderer {
     }
 
     #[inline(always)]
-    fn update_instance_buffer<'a>(&'a self, instances_buffer: Vec<SpriteInstance>, id: usize) -> Option<(wgpu::Buffer, usize)>{
+    fn update_instance_buffer<'a>(&'a self, instances_buffer: Vec<SpriteInstance>, id: usize) -> Option<UpdateBufferStruct>{
         let len = instances_buffer.len();
         let mut borrow = self.vertex_structs[id].instance_state.num_instance_size.borrow_mut();
         let size = borrow.deref_mut();
@@ -231,15 +238,15 @@ impl Renderer {
 
         self.queue.write_buffer(&buf, 0, bytemuck::cast_slice(&instances_buffer));
 
-        Some((buf, id))
+        Some(UpdateBufferStruct { buffer: buf, offset: id })
 
     }   
 
 
-    fn set_instance_buffers(&mut self, to_update_vec: Vec<(wgpu::Buffer, usize)>){
-        for (buffer, id) in to_update_vec.into_iter(){
-            println!("updating instance buffer {}", id);
-            self.vertex_structs[id].instance_state.instance_buffer = buffer;
+    fn set_instance_buffers(&mut self, to_update_vec: Vec<UpdateBufferStruct>){
+        for (u) in to_update_vec.into_iter(){
+            println!("updating instance buffer {}", u.offset);
+            self.vertex_structs[u.offset].instance_state.instance_buffer = u.buffer;
         }
     }
 
