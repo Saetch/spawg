@@ -1,11 +1,11 @@
-use std::{sync::{atomic::AtomicBool, Arc}, num::NonZeroU32};
+use std::{sync::{atomic::AtomicBool, Arc}, num::NonZeroU32, io::Read};
 
 use wgpu::{Queue, Surface, Device, SurfaceConfiguration, RenderPipeline, util::DeviceExt, ShaderModule};
 use winit::{window::{Window, WindowBuilder, Fullscreen}, event_loop::{EventLoop, self, EventLoopBuilder}, dpi::PhysicalSize, event::WindowEvent};
 
-use crate::controller::{position::Position, controller::SharablePosition};
+use crate::{controller::{position::Position, controller::{SharablePosition, CAM_INITIAL_WIDTH, CAM_INITIAL_HEIGHT}}, rendering::sprites::load_sprites::Camera};
 
-use super::{wgpurenderer::{Renderer}, vertex::Vertex};
+use super::{wgpurenderer::{Renderer, VertexBuffers}, vertex::Vertex, sprites::vertex_configration::{VertexConfigration, VertexConfigrationTrait}};
 
 // Creating some of the wgpu types requires async code
 pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (Renderer, event_loop::EventLoop<WindowEvent<'static>>) {
@@ -97,6 +97,20 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (
         }
     );
 
+    let vertex_buffers = load_all_vertex_buffers(&device);
+    let cam_size = [CAM_INITIAL_WIDTH, CAM_INITIAL_HEIGHT];
+    let camera: Camera = Camera{
+        size: cam_size,
+        position: [0.0, 0.0],
+    };
+    
+    
+    let uniform_camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Camera Buffer"),
+        contents: bytemuck::cast_slice(&[camera]),
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+    });
+
 
 
 
@@ -113,7 +127,45 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (
             shader,
             render_receiver: None,
             index_buffer,
+            vertex_buffers,
+            cam_size,
+            camera_buffer: uniform_camera_buffer,
         },
         event_loop
     )
 }
+
+
+fn load_all_vertex_buffers(device: &Device)-> VertexBuffers{
+
+
+    
+    let v_0 = create_vertex_buffer_for_config(device, VertexConfigration::SQUARE_SMALL_1);    //make sure the order is the same as in the VertexConfigration enum
+    let v_1 = create_vertex_buffer_for_config(device, VertexConfigration::NEARLY_SQUARE_RECTANGLE_0);
+    let v_2 = create_vertex_buffer_for_config(device,VertexConfigration::LINE_HORIZONTAL);
+    let v_3 = create_vertex_buffer_for_config(device,VertexConfigration::LINE_VERTICAL);
+
+
+
+    [
+        v_0,
+        v_1,
+        v_2,
+        v_3,
+        
+    ]
+}
+
+fn create_vertex_buffer_for_config(device: &Device, config: VertexConfigration)-> wgpu::Buffer{
+    let vertices = config.get_vertices();
+    let vertex_buffer = device.create_buffer_init(
+        &wgpu::util::BufferInitDescriptor {
+            label: Some("Vertex Buffer"),
+            contents: bytemuck::cast_slice(&vertices),
+            usage: wgpu::BufferUsages::VERTEX,
+        }
+    );
+    vertex_buffer
+}
+
+

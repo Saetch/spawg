@@ -8,9 +8,6 @@ pub(crate) enum VertexConfigration {
 
     LINE_HORIZONTAL,
     LINE_VERTICAL,
-    SOMETHINGSOMETHING,
-    
-    ELSE
 } 
 
 pub trait VertexConfigrationTrait {
@@ -23,8 +20,6 @@ impl VertexConfigrationTrait for VertexConfigration {
     fn get_vertices(&self) -> [Vertex; 4] {
         match self {
             VertexConfigration::SQUARE_SMALL_1 => SQUARE_1_1_VERTEX_CONF(),
-            VertexConfigration::SOMETHINGSOMETHING => todo!(),
-            VertexConfigration::ELSE => todo!(),
             VertexConfigration::LINE_HORIZONTAL => SMALL_LINE_HORIZONTAL_VERTEX_CONF(),
             VertexConfigration::LINE_VERTICAL => SMALL_LINE_VERTICAL_VERTEX_CONF(),
             VertexConfigration::NEARLY_SQUARE_RECTANGLE_0 => SQUARE_0_0_VERTEX_CONF(),

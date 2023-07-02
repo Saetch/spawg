@@ -1,13 +1,14 @@
 use std::{sync::{atomic::AtomicBool, Arc, RwLock}, ops::DerefMut};
 
 use async_std::task::{TaskId, Task, block_on};
-use wgpu::{util::DeviceExt, ShaderModule, RenderPipeline, BindGroup, Device};
+use wgpu::{util::DeviceExt, ShaderModule, RenderPipeline, BindGroup, Device, CommandBuffer};
 use winit::{window::Window, event::WindowEvent};
 
-use crate::{rendering::{vertex::Vertex, sprites::{sprite_mapping::Sprite, vertex_configration::{VertexConfigrationTrait, self}}}, controller::{position::Position, controller::SharablePosition}, model::model::GameObjectList};
+use crate::{rendering::{vertex::Vertex, sprites::{sprite_mapping::Sprite, vertex_configration::{VertexConfigrationTrait, self}}}, controller::{position::Position, controller::SharablePosition}, model::model::GameObjectList, cam_organizer::cam_organizer::CamState};
 
 use super::{sprite_instance::SpriteInstance, sprites::vertex_configration::VertexConfigration};
 
+pub(crate) type VertexBuffers = [wgpu::Buffer; 4];   //<--Update this. This will updated other uses as well, less error prone
 
 
 const NUM_INDICES_PER_SPRITE: u32 = 6;
@@ -22,18 +23,20 @@ pub struct Renderer {
     pub(crate) window: Window,
     pub(crate) running: Arc<AtomicBool>,  //<-- this is used to indicate whether the program should exit or not
     pub(crate) shader: ShaderModule,
-    pub(crate) render_receiver: Option<flume::Receiver<Vec<RenderChunk>>>,
+    pub(crate) render_receiver: Option<flume::Receiver<(Vec<RenderChunk>, CamState)>>,
     pub(crate) index_buffer: wgpu::Buffer,
+    pub(crate) vertex_buffers: VertexBuffers,  //<--this needs to be updated if the number of vertex_configurations changes! this is used to store the vertex buffers for the sprites, so they dont have to be recreated!
+    pub(crate) cam_size: [f32; 2],
+    pub(crate) camera_buffer: wgpu::Buffer,
 }
 
 #[derive(Debug)]
 pub struct RenderChunk{
     pub(crate) vertex_conf: VertexConfigration,
-    pub(crate) vertex_buffer: Vec<Vertex>,
     pub(crate) instance_buffer: Vec<SpriteInstance>,
 }
 pub struct RenderChunkRaw<'a>{
-    pub(crate) vertex_buffer: wgpu::Buffer,
+    pub(crate) vertex_buffer: &'a wgpu::Buffer,
     pub(crate) instance_buffer: wgpu::Buffer,
     pub(crate) num_indices: u32,
     pub(crate) instances_len: usize,
@@ -42,11 +45,7 @@ pub struct RenderChunkRaw<'a>{
 
 
 
-impl PartialEq for RenderChunk {
-    fn eq(&self, other: &Self) -> bool {
-        self.vertex_conf as u32 == other.vertex_conf as u32
-    }
-}
+
 
 #[derive(Debug)]
 pub struct SpriteBuffer {
@@ -74,23 +73,14 @@ impl Renderer {
         )
     }
 
-    #[inline(always)]
-    fn create_vertex_buffer_from_vector(&self, vertex_buffer: Vec<Vertex>) -> wgpu::Buffer {
-        self.device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Vertex Buffer"),
-                contents: bytemuck::cast_slice(&vertex_buffer),
-                usage: wgpu::BufferUsages::VERTEX,
-            }
-        )
-    }
+
 
     #[inline(always)]
     fn chunk_to_raw(&self, chunk: RenderChunk) -> RenderChunkRaw{
         let len = chunk.instance_buffer.len();
 
         RenderChunkRaw{
-            vertex_buffer: self.create_vertex_buffer_from_vector(chunk.vertex_buffer),
+            vertex_buffer: &self.vertex_buffers[chunk.vertex_conf as usize],
             index_buffer: &self.index_buffer,
             instance_buffer: self.create_instance_buffer_from_instance_vector(chunk.instance_buffer),
             num_indices: NUM_INDICES_PER_SPRITE,
@@ -130,8 +120,10 @@ impl Renderer {
             return Ok(());
         }
 
-        let render_ops = self.render_receiver.as_ref().unwrap().recv().unwrap();
+        let (render_ops, cam_state) = self.render_receiver.as_ref().unwrap().recv().unwrap();
   
+
+        self.update_camera_buffer(&cam_state);
         let mut chunk_raw_vec = Vec::with_capacity(render_ops.len());
 
 
@@ -202,6 +194,17 @@ impl Renderer {
 
 
 
+    }
+
+
+#[inline(always)]
+    fn update_camera_buffer(&mut self, cam_state: &CamState){
+        if self.cam_size == cam_state.cam_size{
+            self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[cam_state.cam_pos]));
+            return;
+        }
+        self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[*cam_state]));
+        self.cam_size = cam_state.cam_size;
     }
 }
 

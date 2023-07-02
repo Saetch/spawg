@@ -4,16 +4,19 @@ use async_std::task::block_on;
 use flume::Receiver;
 use winit::{event::{Event, WindowEvent}, event_loop::{ControlFlow}};
 
-use crate::{controller::{input::{ControllerInput, MouseInputType}, position::Position, controller::SharablePosition, renderer_commands::RendererCommand}, model::model::GameObjectList};
+use crate::{controller::{input::{ControllerInput, MouseInputType}, position::Position, controller::SharablePosition, renderer_commands::RendererCommand}, model::model::GameObjectList, cam_organizer::cam_organizer::CamState};
 
-use super::{init::init, wgpurenderer::{Renderer, RenderChunk}, sprites::load_sprites::load_sprites};
+use super::{ wgpurenderer::{Renderer, RenderChunk}, sprites::load_sprites::load_sprites, init::init};
+
+
+
 
 impl Renderer {
 
     //this is the main loop of the program, it will be called from main.rs
     //this whole file is only for putting the event loop and window handling in one easy to use place
     #[inline(always)]
-    pub(crate) async fn run(running: Arc<AtomicBool>, mut join_handles: Vec<JoinHandle<()>>, controller_sender: flume::Sender<ControllerInput>, controller_receiver: Receiver<RendererCommand>, cam_pos: SharablePosition, renderer_receiver: Receiver<Vec<RenderChunk>>) {
+    pub(crate) async fn run(running: Arc<AtomicBool>, mut join_handles: Vec<JoinHandle<()>>, controller_sender: flume::Sender<ControllerInput>, controller_receiver: Receiver<RendererCommand>, cam_pos: SharablePosition, renderer_receiver: Receiver<(Vec<RenderChunk>, CamState)>) {
 
 
         //this is the most important struct for the current state. Almost all infos are grouped here

@@ -69,17 +69,7 @@ pub fn load_sprites(_i: u32, renderer: &Renderer) -> (RenderPipeline, BindGroup,
         );
 
         
-        let camera: CameraSize = CameraSize{
-            values: [CAM_INITIAL_WIDTH, CAM_INITIAL_HEIGHT],
-        };
-        
-        
-        let camera= [CAM_INITIAL_WIDTH, CAM_INITIAL_HEIGHT];
-        let uniform_camera_buffer = renderer.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Camera Buffer"),
-            contents: bytemuck::cast_slice(&[camera]),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
+
 
         
 
@@ -105,7 +95,7 @@ pub fn load_sprites(_i: u32, renderer: &Renderer) -> (RenderPipeline, BindGroup,
             entries: &[
                 wgpu::BindGroupEntry {
                     binding: 0,
-                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding { buffer: &uniform_camera_buffer, offset: 0, size:None  }),
+                    resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding { buffer: &renderer.camera_buffer, offset: 0, size:None  }),
                 }
             ],
             label: Some("camera_bind_group"),
@@ -161,6 +151,7 @@ pub fn load_sprites(_i: u32, renderer: &Renderer) -> (RenderPipeline, BindGroup,
 
 
 
+
         (render_pipeline, diffuse_bind_group, camera_bind_group)
 }
 
@@ -168,9 +159,11 @@ pub fn load_sprites(_i: u32, renderer: &Renderer) -> (RenderPipeline, BindGroup,
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-pub(crate) struct CameraSize{
-    values: [f32; 2],
+pub(crate) struct Camera{
+    pub(crate) position: [f32; 2],
+    pub(crate) size: [f32; 2],
 }
+
 
 
 
