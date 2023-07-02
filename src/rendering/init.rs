@@ -1,11 +1,11 @@
-use std::{sync::{atomic::AtomicBool, Arc}, num::NonZeroU32, io::Read};
+use std::{sync::{atomic::AtomicBool, Arc}, num::NonZeroU32, io::Read, cell::RefCell};
 
 use wgpu::{Queue, Surface, Device, SurfaceConfiguration, RenderPipeline, util::DeviceExt, ShaderModule};
 use winit::{window::{Window, WindowBuilder, Fullscreen}, event_loop::{EventLoop, self, EventLoopBuilder}, dpi::PhysicalSize, event::WindowEvent};
 
-use crate::{controller::{position::Position, controller::{SharablePosition, CAM_INITIAL_WIDTH, CAM_INITIAL_HEIGHT}}, rendering::sprites::load_sprites::Camera};
+use crate::{controller::{position::Position, controller::{SharablePosition, CAM_INITIAL_WIDTH, CAM_INITIAL_HEIGHT}}, rendering::{sprites::load_sprites::Camera, wgpurenderer::VertexBufferStructs}};
 
-use super::{wgpurenderer::{Renderer, VertexBuffers}, vertex::Vertex, sprites::vertex_configration::{VertexConfigration, VertexConfigrationTrait}};
+use super::{wgpurenderer::{Renderer, VertexBuffers, VertexBufferStruct, InstanceBufferState}, vertex::Vertex, sprites::vertex_configration::{VertexConfigration, VertexConfigrationTrait}, sprite_instance::SpriteInstance};
 
 // Creating some of the wgpu types requires async code
 pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (Renderer, event_loop::EventLoop<WindowEvent<'static>>) {
@@ -97,7 +97,7 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (
         }
     );
 
-    let vertex_buffers = load_all_vertex_buffers(&device);
+
     let cam_size = [CAM_INITIAL_WIDTH, CAM_INITIAL_HEIGHT];
     let camera: Camera = Camera{
         size: cam_size,
@@ -111,7 +111,7 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
     });
 
-
+    let vertex_structs: VertexBufferStructs = load_buffer_structs(&device);
 
 
     //now we create a struct that holds all these important things, so we can use it 
@@ -127,34 +127,54 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (
             shader,
             render_receiver: None,
             index_buffer,
-            vertex_buffers,
+            vertex_structs,
             cam_size,
             camera_buffer: uniform_camera_buffer,
+            to_upgrade_vec: RefCell::new(Vec::new()),
         },
         event_loop
     )
 }
 
 
-fn load_all_vertex_buffers(device: &Device)-> VertexBuffers{
-
-
-    
-    let v_0 = create_vertex_buffer_for_config(device, VertexConfigration::SQUARE_SMALL_1);    //make sure the order is the same as in the VertexConfigration enum
-    let v_1 = create_vertex_buffer_for_config(device, VertexConfigration::NEARLY_SQUARE_RECTANGLE_0);
-    let v_2 = create_vertex_buffer_for_config(device,VertexConfigration::LINE_HORIZONTAL);
-    let v_3 = create_vertex_buffer_for_config(device,VertexConfigration::LINE_VERTICAL);
-
-
+fn load_buffer_structs(device: &Device) -> VertexBufferStructs{
 
     [
-        v_0,
-        v_1,
-        v_2,
-        v_3,
-        
+        VertexBufferStruct{
+            vertex_buffer: create_vertex_buffer_for_config(device, VertexConfigration::SQUARE_SMALL_1),
+            instance_state: create_initial_instance_buffer_struct(device, 400),
+        },
+        VertexBufferStruct{
+            vertex_buffer: create_vertex_buffer_for_config(device, VertexConfigration::NEARLY_SQUARE_RECTANGLE_0),
+            instance_state: create_initial_instance_buffer_struct(device, 400),
+        },
+        VertexBufferStruct{
+            vertex_buffer: create_vertex_buffer_for_config(device,VertexConfigration::LINE_HORIZONTAL),
+            instance_state: create_initial_instance_buffer_struct(device, 400),
+        },
+        VertexBufferStruct{
+            vertex_buffer:  create_vertex_buffer_for_config(device,VertexConfigration::LINE_VERTICAL),
+            instance_state: create_initial_instance_buffer_struct(device, 400),
+        }
     ]
+
 }
+
+fn create_initial_instance_buffer_struct(device: &Device, instance_size: usize) -> InstanceBufferState{
+    
+    let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("Instance Buffer"),
+        size: (instance_size * std::mem::size_of::<SpriteInstance>()) as u64,
+        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+    InstanceBufferState{
+        instance_buffer,
+        num_instance_size: RefCell::new(instance_size as u32),
+    }
+}
+
+
 
 fn create_vertex_buffer_for_config(device: &Device, config: VertexConfigration)-> wgpu::Buffer{
     let vertices = config.get_vertices();

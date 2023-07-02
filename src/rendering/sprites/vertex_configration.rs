@@ -1,6 +1,11 @@
 #![allow(dead_code, non_camel_case_types)]
 
 use crate::rendering::vertex::Vertex;
+
+
+
+pub(crate) const NUM_VERTEX_CONFIGURATIONS: usize = 4;   //UPDATE THIS IF YOU ADD MORE VERTEX CONFIGURATIONS!
+
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum VertexConfigration {
     SQUARE_SMALL_1,

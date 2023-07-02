@@ -23,8 +23,6 @@ impl Renderer {
         let (mut renderer, event_loop) = init(running, cam_pos).await;  //we cannot put the event_loop into the Renderer struct, as the .run() function requires a move, which takes ownership of the values in it. And it is not possible for a data field to take ownership of the struct it is in
         renderer.render_receiver = Some(renderer_receiver);
 
-        let event_loop_proxy: winit::event_loop::EventLoopProxy<WindowEvent> = event_loop.create_proxy();
-
         #[allow(unused)]
         let (mut render_pipeline, mut bind_group, mut camera_bind_group) = load_sprites(0, &renderer);
         
