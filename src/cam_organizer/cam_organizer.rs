@@ -1,5 +1,5 @@
 
-use std::{sync::{Arc, atomic::AtomicBool}, time::Duration, cell::RefCell, rc::Rc, pin::Pin};
+use std::{sync::{Arc, atomic::AtomicBool}, time::{Duration, Instant}, cell::RefCell, rc::Rc, pin::Pin};
 
 use async_std::{sync::RwLock, future};
 use bytemuck::{Pod, Zeroable};
@@ -7,7 +7,6 @@ use flume::{Sender, r#async};
 use futures::{join, future::{join_all, BoxFuture}, Future};
 
 use crate::{model::model::GameObjectList, rendering::{wgpurenderer::RenderChunk, sprite_instance::SpriteInstance, sprites::vertex_configration::VertexConfigrationTrait}, controller::controller::{SharablePosition, Direction}, game_objects::game_object::{self, DrawableObject}};
-
 
 const CAMERA_SPEED: f32 = 15.0;
 pub(crate) struct CamOrganizer{
@@ -38,24 +37,16 @@ impl CamOrganizer{
 
     pub(crate) async fn run(&self){
         let mut loop_helper = spin_sleep::LoopHelper::builder()
-        .report_interval_s(0.5) // report every half a second
-        .build_with_target_rate(144.0);
+        .report_interval_s(0.1) // report every half a second
+        .build_with_target_rate(164.0);
         let mut current_fps = None;
 
-        let mut dummy_counter = 0;
         while self.running.load(std::sync::atomic::Ordering::Relaxed) {     
-
-
-            let delta = loop_helper.loop_start(); // or .loop_start_s() for f64 seconds.  This is just here to show and lock fps
-
+            loop_helper.loop_sleep();
+            let delta = loop_helper.loop_start();
             if let Some(fps) = loop_helper.report_rate() {
-                    current_fps = Some(fps.round());
-                    dummy_counter += 1;
-                    if dummy_counter > 3{
-                        println!("FPS: {}", current_fps.unwrap());
-                        dummy_counter = 0;
-                }
-
+                current_fps = Some(fps);
+                println!("FPS: {}", fps);
             }
             let render_ops: Vec<RenderChunk> = Vec::with_capacity(10);
             let cell = Rc::new(RefCell::new(render_ops));
@@ -74,11 +65,11 @@ impl CamOrganizer{
             let (_ , cam_state) = futures::join!(vec_join, fut);
             drop(lock);
 
-            let res = self.sender.send((Rc::try_unwrap(cell).unwrap().into_inner(), cam_state));
-            if let Err(e) = res{
+            let res = self.sender.send_async((Rc::try_unwrap(cell).unwrap().into_inner(), cam_state));
+            if let Err(e) = res.await{    //TODO, prepare next frame before awaiting a send for the current one
                 println!("Could not send rendering info to renderer thread: {}", e);
             }
-            loop_helper.loop_sleep(); // sleeps to acheive the target rate
+            
         }
 
 
