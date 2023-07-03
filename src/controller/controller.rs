@@ -12,8 +12,8 @@ use super::position::Position;
 use super::renderer_commands::RendererCommand;
 
 
-const CAM_INITIAL_WIDTH: f32 = 24.0;
-const CAM_INITIAL_HEIGHT: f32 = CAM_INITIAL_WIDTH / CAM_RATIO;
+pub(crate) const CAM_INITIAL_WIDTH: f32 = 24.0;
+pub(crate) const CAM_INITIAL_HEIGHT: f32 = CAM_INITIAL_WIDTH / CAM_RATIO;
 const CAM_RATIO: f32 = 1280.0 / 720.0; //this is the ratio of the camera, it is used to calculate objects' positions on the screen
 
 

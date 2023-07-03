@@ -1,11 +1,11 @@
-use std::{sync::{atomic::AtomicBool, Arc}, num::NonZeroU32};
+use std::{sync::{atomic::AtomicBool, Arc}, num::NonZeroU32, io::Read, cell::RefCell};
 
 use wgpu::{Queue, Surface, Device, SurfaceConfiguration, RenderPipeline, util::DeviceExt, ShaderModule};
 use winit::{window::{Window, WindowBuilder, Fullscreen}, event_loop::{EventLoop, self, EventLoopBuilder}, dpi::PhysicalSize, event::WindowEvent};
 
-use crate::controller::{position::Position, controller::SharablePosition};
+use crate::{controller::{position::Position, controller::{SharablePosition, CAM_INITIAL_WIDTH, CAM_INITIAL_HEIGHT}}, rendering::{sprites::load_sprites::Camera, wgpurenderer::VertexBufferStructs}};
 
-use super::{wgpurenderer::{Renderer}, vertex::Vertex};
+use super::{wgpurenderer::{Renderer, VertexBuffers, VertexBufferStruct, InstanceBufferState}, vertex::Vertex, sprites::vertex_configration::{VertexConfigration, VertexConfigrationTrait}, sprite_instance::SpriteInstance};
 
 // Creating some of the wgpu types requires async code
 pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (Renderer, event_loop::EventLoop<WindowEvent<'static>>) {
@@ -74,7 +74,7 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (
         format: surface_format,                        //the format we just got from the surface_caps, most likely Bgra8UnormSrgb
         width: size.width,                             //this is the size of the window
         height: size.height,
-        present_mode: *present_mode,   //this basically is wgpu::PresentMode::Fifo (FIFO = First In First Out), since this is always supported and always the first
+        present_mode: *present_mode,   //this basically is wgpu::PresentMode::Fifo (FIFO = First In First Out), if Mailbox is not supported
         alpha_mode: surface_caps.alpha_modes[0],       //this basically is wgpu::AlphaMode::Opaque, since this is always supported and always the first
         view_formats: vec![],
     };
@@ -85,9 +85,33 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (
 
     //I thought at first to load the sprites here, but this is not a good idea, since we need to load them every time we change the sprite sheet
 
+    const INDICES: &[u16] = &[
+        0, 1, 2,  // Triangle ABC
+        0, 2, 3,  // Triangle ACD
+    ];
+    let index_buffer = device.create_buffer_init(
+        &wgpu::util::BufferInitDescriptor {
+            label: Some("Index Buffer"),
+            contents: bytemuck::cast_slice(&INDICES),
+            usage: wgpu::BufferUsages::INDEX,
+        }
+    );
 
 
+    let cam_size = [CAM_INITIAL_WIDTH, CAM_INITIAL_HEIGHT];
+    let camera: Camera = Camera{
+        size: cam_size,
+        position: [0.0, 0.0],
+    };
+    
+    
+    let uniform_camera_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Camera Buffer"),
+        contents: bytemuck::cast_slice(&[camera]),
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+    });
 
+    let vertex_structs: VertexBufferStructs = load_buffer_structs(&device);
 
 
     //now we create a struct that holds all these important things, so we can use it 
@@ -102,7 +126,66 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (
             running,
             shader,
             render_receiver: None,
+            index_buffer,
+            vertex_structs,
+            cam_size,
+            camera_buffer: uniform_camera_buffer,
+            to_upgrade_vec: RefCell::new(Vec::new()),
         },
         event_loop
     )
 }
+
+
+fn load_buffer_structs(device: &Device) -> VertexBufferStructs{
+
+    [
+        VertexBufferStruct{
+            vertex_buffer: create_vertex_buffer_for_config(device, VertexConfigration::SQUARE_SMALL_1),
+            instance_state: create_initial_instance_buffer_struct(device, 100),
+        },
+        VertexBufferStruct{
+            vertex_buffer: create_vertex_buffer_for_config(device, VertexConfigration::NEARLY_SQUARE_RECTANGLE_0),
+            instance_state: create_initial_instance_buffer_struct(device, 100),
+        },
+        VertexBufferStruct{
+            vertex_buffer: create_vertex_buffer_for_config(device,VertexConfigration::LINE_HORIZONTAL),
+            instance_state: create_initial_instance_buffer_struct(device, 100),
+        },
+        VertexBufferStruct{
+            vertex_buffer:  create_vertex_buffer_for_config(device,VertexConfigration::LINE_VERTICAL),
+            instance_state: create_initial_instance_buffer_struct(device, 100),
+        }
+    ]
+
+}
+
+fn create_initial_instance_buffer_struct(device: &Device, instance_size: usize) -> InstanceBufferState{
+    
+    let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("Instance Buffer"),
+        size: (instance_size * std::mem::size_of::<SpriteInstance>()) as u64,
+        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+    InstanceBufferState{
+        instance_buffer,
+        num_instance_size: RefCell::new(instance_size as u32),
+    }
+}
+
+
+
+fn create_vertex_buffer_for_config(device: &Device, config: VertexConfigration)-> wgpu::Buffer{
+    let vertices = config.get_vertices();
+    let vertex_buffer = device.create_buffer_init(
+        &wgpu::util::BufferInitDescriptor {
+            label: Some("Vertex Buffer"),
+            contents: bytemuck::cast_slice(&vertices),
+            usage: wgpu::BufferUsages::VERTEX,
+        }
+    );
+    vertex_buffer
+}
+
+

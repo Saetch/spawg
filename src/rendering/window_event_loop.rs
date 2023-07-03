@@ -4,26 +4,27 @@ use async_std::task::block_on;
 use flume::Receiver;
 use winit::{event::{Event, WindowEvent}, event_loop::{ControlFlow}};
 
-use crate::{controller::{input::{ControllerInput, MouseInputType}, position::Position, controller::SharablePosition, renderer_commands::RendererCommand}, model::model::GameObjectList};
+use crate::{controller::{input::{ControllerInput, MouseInputType}, position::Position, controller::SharablePosition, renderer_commands::RendererCommand}, model::model::GameObjectList, cam_organizer::cam_organizer::CamState};
 
-use super::{init::init, wgpurenderer::{Renderer, RenderChunk}, sprites::load_sprites::load_sprites};
+use super::{ wgpurenderer::{Renderer, RenderChunk}, sprites::load_sprites::load_sprites, init::init};
+
+
+
 
 impl Renderer {
 
     //this is the main loop of the program, it will be called from main.rs
     //this whole file is only for putting the event loop and window handling in one easy to use place
     #[inline(always)]
-    pub(crate) async fn run(running: Arc<AtomicBool>, mut join_handles: Vec<JoinHandle<()>>, controller_sender: flume::Sender<ControllerInput>, controller_receiver: Receiver<RendererCommand>, cam_pos: SharablePosition, renderer_receiver: Receiver<Vec<RenderChunk>>) {
+    pub(crate) async fn run(running: Arc<AtomicBool>, mut join_handles: Vec<JoinHandle<()>>, controller_sender: flume::Sender<ControllerInput>, controller_receiver: Receiver<RendererCommand>, cam_pos: SharablePosition, renderer_receiver: Receiver<(Vec<RenderChunk>, CamState)>) {
 
 
         //this is the most important struct for the current state. Almost all infos are grouped here
         let (mut renderer, event_loop) = init(running, cam_pos).await;  //we cannot put the event_loop into the Renderer struct, as the .run() function requires a move, which takes ownership of the values in it. And it is not possible for a data field to take ownership of the struct it is in
         renderer.render_receiver = Some(renderer_receiver);
 
-        let event_loop_proxy: winit::event_loop::EventLoopProxy<WindowEvent> = event_loop.create_proxy();
-
         #[allow(unused)]
-        let (mut render_pipeline, mut bind_group) = load_sprites(0, &renderer);
+        let (mut render_pipeline, mut bind_group, mut camera_bind_group) = load_sprites(0, &renderer);
         
         event_loop.run(move |event, _, control_flow| match event {
             Event::RedrawRequested(window_id) if window_id == renderer.window.id() => {
@@ -128,7 +129,7 @@ impl Renderer {
     
         }
         Event::MainEventsCleared => {
-            let res = renderer.render(&render_pipeline, &bind_group);
+            let res = renderer.render(&render_pipeline, &bind_group, &camera_bind_group);
             if let Err(e) = res {
                 eprintln!("Error during rendering: {:?}", e);
             }

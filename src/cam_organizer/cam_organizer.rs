@@ -1,28 +1,28 @@
 
-use std::{sync::{Arc, atomic::AtomicBool}, time::Duration, cell::RefCell, rc::Rc};
+use std::{sync::{Arc, atomic::AtomicBool}, time::{Duration, Instant}, cell::RefCell, rc::Rc, pin::Pin};
 
 use async_std::{sync::RwLock, future};
+use bytemuck::{Pod, Zeroable};
 use flume::{Sender, r#async};
-use futures::{join, future::join_all};
+use futures::{join, future::{join_all, BoxFuture}, Future};
 
 use crate::{model::model::GameObjectList, rendering::{wgpurenderer::RenderChunk, sprite_instance::SpriteInstance, sprites::vertex_configration::VertexConfigrationTrait}, controller::controller::{SharablePosition, Direction}, game_objects::game_object::{self, DrawableObject}};
 
-
-const CAMERA_SPEED: f32 = 1.0;
+const CAMERA_SPEED: f32 = 15.0;
 pub(crate) struct CamOrganizer{
     state: u32,
     pub(crate) game_objects: GameObjectList,
     cam_pos: SharablePosition,
     cam_proportions: Arc<RwLock<(f32, f32)>>,
     cam_directions: Arc<RwLock<(Direction, Direction)>>,
-    sender: Sender<Vec<RenderChunk>>,
+    sender: Sender<(Vec<RenderChunk>, CamState)>,
     pub(crate) running: Arc<AtomicBool>,  //<-- this is used to indicate whether the program should exit or not
     
 }
 
 impl CamOrganizer{
 
-    pub(crate) fn new(game_objects : GameObjectList, cam_pos: SharablePosition, sender: Sender<Vec<RenderChunk>>, cam_proportions: Arc<RwLock<(f32, f32)>>, cam_directions: Arc<RwLock<(Direction, Direction)>>, running: Arc<AtomicBool>) -> CamOrganizer{
+    pub(crate) fn new(game_objects : GameObjectList, cam_pos: SharablePosition, sender: Sender<(Vec<RenderChunk>, CamState)>, cam_proportions: Arc<RwLock<(f32, f32)>>, cam_directions: Arc<RwLock<(Direction, Direction)>>, running: Arc<AtomicBool>) -> CamOrganizer{
         CamOrganizer{
             state: 0,
             game_objects: game_objects,
@@ -37,51 +37,37 @@ impl CamOrganizer{
 
     pub(crate) async fn run(&self){
         let mut loop_helper = spin_sleep::LoopHelper::builder()
-        .report_interval_s(0.5) // report every half a second
+        .report_interval_s(1.0) // report every half a second
         .build_with_target_rate(144.0);
-        let mut current_fps = None;
 
-        let mut dummy_counter = 0;
         while self.running.load(std::sync::atomic::Ordering::Relaxed) {     
-
-
-            let delta = loop_helper.loop_start(); // or .loop_start_s() for f64 seconds.  This is just here to show and lock fps
-
+            loop_helper.loop_sleep();
+            let delta = loop_helper.loop_start();
             if let Some(fps) = loop_helper.report_rate() {
-                    current_fps = Some(fps.round());
-                    dummy_counter += 1;
-                    if dummy_counter > 3{
-                        println!("FPS: {}", current_fps.unwrap());
-                        dummy_counter = 0;
-                }
-
+                println!("FPS: {}", fps);
             }
-            let f1 = self.compute_camera(delta);
-            let f2 = self.cam_proportions.read();
-            let (res, cam_proportions) = join!(f1, f2);
-            let cam_prop = (cam_proportions.0 /2.0, cam_proportions.1 /2.0);
-            drop(cam_proportions);
-            let (x_os, y_os) = (res.0, res.1);
-            let render_ops: Vec<RenderChunk> = Vec::new();
+            let render_ops: Vec<RenderChunk> = Vec::with_capacity(10);
             let cell = Rc::new(RefCell::new(render_ops));
             let lock = self.game_objects.as_ref().read().await;
             let mut futures_vec = Vec::new();
             for obj in lock.iter(){
             
-                let fut =  Self::process_object(obj, cell.clone(), &cam_prop, &x_os, &y_os);
+                let fut =  Self::process_object(obj, cell.clone()) ;
                 futures_vec.push(fut);
             }
 
+            let fut = self.compute_camera(delta);
 
-            join_all(futures_vec).await;
+            
+            let vec_join = join_all(futures_vec);
+            let (_ , cam_state) = futures::join!(vec_join, fut);
             drop(lock);
-            //drop(lock);
 
-            let res = self.sender.send(Rc::try_unwrap(cell).unwrap().into_inner());
-            if let Err(e) = res{
+            let res = self.sender.send((Rc::try_unwrap(cell).unwrap().into_inner(), cam_state));
+            if let Err(e) = res{    //TODO, prepare next frame before awaiting a send for the current one
                 println!("Could not send rendering info to renderer thread: {}", e);
             }
-            loop_helper.loop_sleep(); // sleeps to acheive the target rate
+            
         }
 
 
@@ -92,7 +78,7 @@ impl CamOrganizer{
 
 
 #[inline(always)]
-    async fn process_object(obj: &Arc<RwLock<dyn DrawableObject + Send + Sync>>, render_ops: Rc<RefCell<Vec<RenderChunk>>>, cam_prop: &(f32, f32), x_os: &f32, y_os: &f32) {
+    async fn process_object(obj: &Arc<RwLock<dyn DrawableObject + Send + Sync>>, render_ops: Rc<RefCell<Vec<RenderChunk>>>){
         let obj_lock = obj.read().await;
                 let texture_id = *obj_lock.get_texture() as u32;
                 let position = obj_lock.get_position();
@@ -102,32 +88,33 @@ impl CamOrganizer{
                 let already_queued = borrow.iter_mut().find(|chunk| chunk.vertex_conf as u32 == *vertex_configration as u32);
                 if let Some(queue) = already_queued{
                     queue.instance_buffer.push(SpriteInstance {
-                        position: [position.x/cam_prop.0-x_os, position.y/cam_prop.1-y_os],
+                        position: [position.x, position.y],
                         texture_id: texture_id,
                     });
                 }else{
-                    let vertex_buffer = Vec::from(vertex_configration.get_vertices((24, 14)));
                     let instance_buffer = 
                         vec![SpriteInstance {
-                            position: [position.x/cam_prop.0-x_os, position.y/cam_prop.1-y_os],
+                            position: [position.x, position.y],
                             texture_id: texture_id,
                         }];
                     let render_chunk = RenderChunk{
                         vertex_conf: *vertex_configration,
-                        vertex_buffer: vertex_buffer,
                         instance_buffer: instance_buffer,   //this is because a sprite consists of 2 triangles at the moment. If this changes and can be dynamically set, this should be updated
                     };
                     borrow.push(render_chunk);
                 }
+
     }
 
 
 #[inline(always)]
-    async fn compute_camera(&self, delta_ms: Duration) -> (f32, f32){
-        let cam_directions = self.cam_directions.read().await;
-        let mut cam_pos = self.cam_pos.write().await;
-
+    async fn compute_camera(&self, delta_ms: Duration) -> CamState {
+        let cam_directions = self.cam_directions.read();
+        let cam_pos = self.cam_pos.write();
+        let cam_size = self.cam_proportions.read();
         
+        let(cam_directions, mut cam_pos, cam_size) = join!(cam_directions, cam_pos, cam_size);
+
         //compute x direction
         let x_direction = match cam_directions.0{
             Direction::Positive => CAMERA_SPEED*1.0,
@@ -144,7 +131,21 @@ impl CamOrganizer{
         };
         cam_pos.y += y_direction * delta_ms.as_millis() as f32 / 1000.0;
 
-        (cam_pos.x, cam_pos.y)
+        CamState{
+            cam_size: [cam_size.0, cam_size.1],
+            cam_pos: [cam_pos.x, cam_pos.y],
+        }
+
+
+
     }
 
+}
+
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+pub(crate) struct CamState{
+    pub(crate) cam_size: [f32; 2],
+    pub(crate) cam_pos: [f32; 2],
 }
