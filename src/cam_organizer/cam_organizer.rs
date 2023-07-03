@@ -37,7 +37,7 @@ impl CamOrganizer{
 
     pub(crate) async fn run(&self){
         let mut loop_helper = spin_sleep::LoopHelper::builder()
-        .report_interval_s(0.1) // report every half a second
+        .report_interval_s(1.0) // report every half a second
         .build_with_target_rate(164.0);
         let mut current_fps = None;
 
@@ -65,8 +65,8 @@ impl CamOrganizer{
             let (_ , cam_state) = futures::join!(vec_join, fut);
             drop(lock);
 
-            let res = self.sender.send_async((Rc::try_unwrap(cell).unwrap().into_inner(), cam_state));
-            if let Err(e) = res.await{    //TODO, prepare next frame before awaiting a send for the current one
+            let res = self.sender.send((Rc::try_unwrap(cell).unwrap().into_inner(), cam_state));
+            if let Err(e) = res{    //TODO, prepare next frame before awaiting a send for the current one
                 println!("Could not send rendering info to renderer thread: {}", e);
             }
             
