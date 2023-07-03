@@ -38,7 +38,7 @@ impl CamOrganizer{
     pub(crate) async fn run(&self){
         let mut loop_helper = spin_sleep::LoopHelper::builder()
         .report_interval_s(1.0) // report every half a second
-        .build_with_target_rate(164.0);
+        .build_with_target_rate(144.0);
         let mut current_fps = None;
 
         while self.running.load(std::sync::atomic::Ordering::Relaxed) {     
@@ -58,7 +58,7 @@ impl CamOrganizer{
                 futures_vec.push(fut);
             }
 
-            let fut = self.compute_camera(delta);
+            let fut = self.compute_camera(delta.as_micros() as f32);
 
             
             let vec_join = join_all(futures_vec);
@@ -66,7 +66,7 @@ impl CamOrganizer{
             drop(lock);
 
             let res = self.sender.send((Rc::try_unwrap(cell).unwrap().into_inner(), cam_state));
-            if let Err(e) = res{    //TODO, prepare next frame before awaiting a send for the current one
+            if let Err(e) = res{ 
                 println!("Could not send rendering info to renderer thread: {}", e);
             }
             
@@ -110,7 +110,7 @@ impl CamOrganizer{
 
 
 #[inline(always)]
-    async fn compute_camera(&self, delta_ms: Duration) -> CamState {
+    async fn compute_camera(&self, delta_us: f32) -> CamState {
         let cam_directions = self.cam_directions.read();
         let cam_pos = self.cam_pos.write();
         let cam_size = self.cam_proportions.read();
@@ -124,14 +124,14 @@ impl CamOrganizer{
             _ => 0.0,
         
         };
-        cam_pos.x += x_direction * delta_ms.as_millis() as f32 / 1000.0;
+        cam_pos.x += x_direction * delta_us / 1_000_000.0;
         //compute y direction
         let y_direction = match cam_directions.1{
             Direction::Positive => CAMERA_SPEED*1.0,
             Direction::Negative => CAMERA_SPEED*-1.0,
             _ => 0.0,
         };
-        cam_pos.y += y_direction * delta_ms.as_millis() as f32 / 1000.0;
+        cam_pos.y += y_direction * delta_us / 1_000_000.0;
 
         CamState{
             cam_size: [cam_size.0, cam_size.1],

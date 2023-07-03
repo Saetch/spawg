@@ -181,7 +181,7 @@ impl Renderer {
                 render_pass.set_vertex_buffer(0, render_op.vertex_buffer.slice(..));
 
                 render_pass.set_vertex_buffer(1, render_op.instance_buffer.slice(..));
-
+     
                 render_pass.set_vertex_buffer(1, render_op.instance_buffer.slice(..));
                 render_pass.set_index_buffer(render_op.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
                 render_pass.draw_indexed(0..render_op.num_indices, 0, 0..render_op.instances_len as u32);
@@ -222,10 +222,12 @@ impl Renderer {
         let len = instances_buffer.len();
         let mut borrow = self.vertex_structs[id].instance_state.num_instance_size.borrow_mut();
         let size = borrow.deref_mut();
-        if len < *size as usize {
+        if len <= *size as usize {
             self.queue.write_buffer(&self.vertex_structs[id].instance_state.instance_buffer, 0, bytemuck::cast_slice(&instances_buffer));
             return None;
         }
+        self.queue.write_buffer(&self.vertex_structs[id].instance_state.instance_buffer, 0, bytemuck::cast_slice(&instances_buffer[..*size as usize]));
+
         let new_size = len as u32 + 300;
         *size = new_size;
         let buf = self.device.create_buffer(&wgpu::BufferDescriptor {
@@ -244,7 +246,7 @@ impl Renderer {
 
 
     fn set_instance_buffers(&mut self, to_update_vec: Vec<UpdateBufferStruct>){
-        for (u) in to_update_vec.into_iter(){
+        for u in to_update_vec.into_iter(){
             println!("updating instance buffer {}", u.offset);
             self.vertex_structs[u.offset].instance_state.instance_buffer = u.buffer;
         }
