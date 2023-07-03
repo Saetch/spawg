@@ -38,14 +38,12 @@ impl CamOrganizer{
     pub(crate) async fn run(&self){
         let mut loop_helper = spin_sleep::LoopHelper::builder()
         .report_interval_s(1.0) // report every half a second
-        .build_with_target_rate(164.0);
-        let mut current_fps = None;
+        .build_with_target_rate(144.0);
 
         while self.running.load(std::sync::atomic::Ordering::Relaxed) {     
             loop_helper.loop_sleep();
             let delta = loop_helper.loop_start();
             if let Some(fps) = loop_helper.report_rate() {
-                current_fps = Some(fps);
                 println!("FPS: {}", fps);
             }
             let render_ops: Vec<RenderChunk> = Vec::with_capacity(10);

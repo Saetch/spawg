@@ -74,7 +74,7 @@ pub async fn init(running: Arc<AtomicBool>, cam_position: SharablePosition) -> (
         format: surface_format,                        //the format we just got from the surface_caps, most likely Bgra8UnormSrgb
         width: size.width,                             //this is the size of the window
         height: size.height,
-        present_mode: *present_mode,   //this basically is wgpu::PresentMode::Fifo (FIFO = First In First Out), since this is always supported and always the first
+        present_mode: *present_mode,   //this basically is wgpu::PresentMode::Fifo (FIFO = First In First Out), if Mailbox is not supported
         alpha_mode: surface_caps.alpha_modes[0],       //this basically is wgpu::AlphaMode::Opaque, since this is always supported and always the first
         view_formats: vec![],
     };
