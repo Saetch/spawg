@@ -5,6 +5,7 @@ use controller::{controller::Controller, position::Position, controller_commands
 use flume::Receiver;
 use model::model::Model;
 use rendering::wgpurenderer::RenderChunk;
+use serde::Deserialize;
 use crate::{rendering::wgpurenderer::Renderer, controller::controller::SharablePosition, cam_organizer::cam_organizer::CamOrganizer, };
 
 
@@ -13,6 +14,7 @@ mod rendering;
 mod model;
 mod controller;
 mod cam_organizer;
+
 #[async_std::main]
 pub async fn main() {
 

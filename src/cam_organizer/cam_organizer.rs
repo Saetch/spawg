@@ -44,7 +44,7 @@ impl CamOrganizer{
             loop_helper.loop_sleep();
             let delta = loop_helper.loop_start();
             if let Some(fps) = loop_helper.report_rate() {
-                println!("FPS: {}", fps);
+                //println!("FPS: {}", fps);
             }
             let render_ops: Vec<RenderChunk> = Vec::with_capacity(10);
             let cell = Rc::new(RefCell::new(render_ops));

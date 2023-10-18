@@ -20,6 +20,7 @@ pub(crate) struct Maze{
     maze: Vec<Vec<Rc<RefCell<MazeTile>>>>,
     current_path: Option<Vec<Weak<RefCell<MazeTile>>>>,
     id: u32,
+    blocked: Vec<Vec<(usize, usize)>>,
 }
 
 
@@ -75,6 +76,13 @@ impl Maze{
 
         let start_tile= Rc::downgrade(&maze[0][0].clone());
         let end_tile= Rc::downgrade(&maze[width-1][height-1].clone());
+        let mut bl = Vec::new();
+
+        for _ in 0..4{
+            let v: Vec<(usize, usize)> = Vec::new();
+            bl.push(v.clone());
+        }
+
         let mut maze = Maze { 
             id: 0,
             maze: maze,
@@ -83,11 +91,12 @@ impl Maze{
             current_path: Some(Vec::new()),
             next_tile_ms: 2000,
             start_tile: start_tile,
-            end_tile: end_tile,            
+            end_tile: end_tile,     
+            blocked: bl,       
          };
        
         maze.set_outside_walls();
-        
+        maze.trim();
         //set left of 0,0 and right of width-1, height-1 to true, these are the start and end points
         RefCell::borrow_mut(&maze.maze[0][0]).connected.3 = true;
 
@@ -96,6 +105,21 @@ impl Maze{
         let objects = maze.generate_maze_objects(); 
 
         (maze, objects)
+    }
+
+
+    //set tiles at the center to the bottom to right visited
+    fn trim(&mut self){
+        for j in 0..self.height/2{
+            let mut tile = self.maze[self.width/2][j].borrow_mut();
+            tile.connected.1= false;
+            self.blocked[1].push(tile.position);	
+        }
+        for i in self.width/2+1.. self.width{
+            let mut tile = self.maze[i][self.height/2].borrow_mut();
+            tile.connected.2= false;
+            self.blocked[2].push(tile.position);
+        }
     }
 
     fn generate_maze_objects(&self) -> GameObjects{
@@ -276,18 +300,11 @@ impl Maze{
         if direction > 3 {
             panic!("Direction must be between 0 and 3");
         }
+
+
         
         let (x, y) = tile.position;
-        if direction == 0 && x == (self.maze.len() ){
-            return None;
-        }
-        if direction == 1 && y == (self.maze[0].len() ){
-            return None;
-        }
-        if direction == 3 && x == 0{
-            return None;
-        }
-        if direction == 2 && y == 0{
+        if !self.visitable_check(x, y, direction){
             return None;
         }
         let (updated_x, updated_y) = match direction{
@@ -302,14 +319,37 @@ impl Maze{
             let column_check = row.get(updated_y);
             if let Some(tile) = column_check{
                 let weak = Rc::downgrade(&tile);
+                
                 return Some(weak);
+
+                
             }
         }
         None
 
     }
 
+    fn visitable_check(&self, x: usize,y: usize, direction: usize) -> bool{
 
+
+        if self.blocked[direction].contains(&(x,y)){
+            return false;
+        }
+
+        if direction == 0 && x == (self.maze.len() ){
+            return false;
+        }
+        if direction == 1 && y == (self.maze[0].len() ){
+            return false;
+        }
+        if direction == 3 && x == 0{
+            return false;
+        }
+        if direction == 2 && y == 0{
+            return false;
+        }
+        return true;
+    }
 
 
 }
