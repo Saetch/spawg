@@ -34,10 +34,6 @@ impl DrawableObject for Line{
         
     }
 
-    #[inline(always)]
-    fn process_logic(&mut self, delta_time: f64) -> LogicResult{
-        return LogicResult::None;
-    }
 
     fn get_vertex_configuration(&self) -> &crate::rendering::sprites::vertex_configration::VertexConfigration {
        match self{

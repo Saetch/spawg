@@ -11,6 +11,7 @@ pub(crate) enum Level{
     Initial,
     Maze,
     LogicTests,
+    StrategyTest,
 }
 
 impl Model{
@@ -23,7 +24,14 @@ impl Model{
             Level::Initial => self.load_initial_level().await,
             Level::Maze => self.load_maze_level().await,
             Level::LogicTests => self.load_logic_tests().await,
+            Level::StrategyTest => self.load_strategy_test().await,
         } 
+    }
+
+    pub(crate) async fn load_strategy_test(&mut self){
+        self.clear_objects().await;
+
+
     }
 
     pub(crate) async fn load_maze_level(&mut self){

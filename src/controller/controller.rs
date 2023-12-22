@@ -88,7 +88,7 @@ impl Controller{
 
 
     pub(crate) async fn run(&mut self){
-        self.model_sender.send(ControllerCommand::LoadLevel(Level::LogicTests)).unwrap();   //here we define what level should start. We use the controller for that, just because it is supposed to later decide what level to load anyways
+        self.model_sender.send(ControllerCommand::LoadLevel(Level::Maze)).unwrap();   //here we define what level should start. We use the controller for that, just because it is supposed to later decide what level to load anyways
 
 
         while self.personal_running_bool{

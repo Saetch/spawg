@@ -1,30 +1,18 @@
-use log::Log;
+use crate::{rendering::sprites::{sprite_mapping::Sprite, vertex_configration::VertexConfigration}, controller::position::Position, game_objects::game_object::DrawableObject, model::results::LogicResult};
 
-use crate::{game_objects::game_object::{self, DrawableObject}, controller::position::Position, rendering::{sprites::{sprite_mapping::Sprite, vertex_configration::VertexConfigration}, vertex::Vertex}, model::results::LogicResult};
 #[derive(Debug)]
-pub(crate) struct DebugHouse{
+pub(crate) struct StartObj{
     pub(crate) texture: Sprite,
     pub position: Position,
     pub vertices: VertexConfigration,
     id : u64,
 }
 
-
-impl DebugHouse {
-    pub(crate) fn new(texture: Sprite, position: Position, vertices: VertexConfigration) -> Self{
-        Self{
-            texture,
-            position,
-            vertices,
-            id: 0,
-        }
-    }
-}
-
-impl DrawableObject for DebugHouse{
+impl DrawableObject for StartObj{
     fn get_position(&self) -> Position {
         self.position
     }
+
 
     fn get_x_y_values(&self) -> (f32, f32) {
         (self.position.x, self.position.y)

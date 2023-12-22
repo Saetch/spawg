@@ -3,7 +3,7 @@ use std::{ time::Duration, cell::{RefCell, Ref, RefMut}, rc::{Rc, Weak}, sync::{
 use async_std::sync::RwLock;
 use rand::Rng;
 
-use crate::{game_objects::{game_object::{DrawableObject, LogicObject}, debug::line::Line, buildings::debug_house::DebugHouse}, model::results::{LogicResult, GameObjects}, controller::{controller::Direction, position::Position}, rendering::sprites::{vertex_configration::VertexConfigration, sprite_mapping::Sprite}};
+use crate::{game_objects::{game_object::{DrawableObject, LogicObject}, debug::line::Line, buildings::debug_house::DebugHouse}, model::{results::{LogicResult, GameObjects}, strategy_test::worker::Worker}, controller::{controller::Direction, position::Position}, rendering::sprites::{vertex_configration::VertexConfigration, sprite_mapping::Sprite}};
 
 
 const DISTANCE_BETWEEN_TILES: f32 = 0.48;
@@ -21,6 +21,7 @@ pub(crate) struct Maze{
     current_path: Option<Vec<Weak<RefCell<MazeTile>>>>,
     id: u32,
     blocked: Vec<Vec<(usize, usize)>>,
+
 }
 
 
@@ -96,7 +97,7 @@ impl Maze{
          };
        
         maze.set_outside_walls();
-        maze.trim();
+        //maze.trim();
         //set left of 0,0 and right of width-1, height-1 to true, these are the start and end points
         RefCell::borrow_mut(&maze.maze[0][0]).connected.3 = true;
 
@@ -110,16 +111,25 @@ impl Maze{
 
     //set tiles at the center to the bottom to right visited
     fn trim(&mut self){
-        for j in 0..self.height/2{
-            let mut tile = self.maze[self.width/2][j].borrow_mut();
+        let h_th = self.height/3;
+        let w_th = self.width/3;
+        for j in h_th..h_th*2{
+            let mut tile = self.maze[w_th-1][j].borrow_mut();
             tile.connected.1= false;
-            self.blocked[1].push(tile.position);	
+            self.blocked[1].push(tile.position);
+            let mut tile = self.maze[w_th*2][j].borrow_mut();
+            tile.connected.3= false;
+            self.blocked[3].push(tile.position);
         }
-        for i in self.width/2+1.. self.width{
-            let mut tile = self.maze[i][self.height/2].borrow_mut();
+        for i in w_th..w_th*2{
+            let mut tile = self.maze[i][h_th-1].borrow_mut();
+            tile.connected.0= false;
+            self.blocked[0].push(tile.position);
+            let mut tile = self.maze[i][h_th*2].borrow_mut();
             tile.connected.2= false;
             self.blocked[2].push(tile.position);
         }
+
     }
 
     fn generate_maze_objects(&self) -> GameObjects{

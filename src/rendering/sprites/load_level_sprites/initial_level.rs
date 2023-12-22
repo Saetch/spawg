@@ -18,7 +18,8 @@ pub(crate) fn load_initial_level_sprites(renderer: &Renderer) ->  Vec<TextureVie
     let solid_blue_pixel_texture_view = load_sprite_from_memory_uncropped(&diffuse_bytes.as_slice(), renderer);
     let diffuse_bytes = include_bytes!("../../../../textures/Solid_green_pixel_1x1.png");
     let solid_green_pixel_texture_view = load_sprite_from_memory_uncropped(&diffuse_bytes.as_slice(), renderer);
-
+    let diffuse_bytes = include_bytes!("../../../../textures/bordered_triangle_upside_down_14px.png");
+    let worker_base_triangle_texture_view = load_sprite_from_memory_uncropped(&diffuse_bytes.as_slice(), renderer);
     let mut texture_view_array = Vec::new();
 
 
@@ -27,7 +28,7 @@ pub(crate) fn load_initial_level_sprites(renderer: &Renderer) ->  Vec<TextureVie
     texture_view_array.push(black_pixel_texture_view);
     texture_view_array.push(solid_blue_pixel_texture_view);
     texture_view_array.push(solid_green_pixel_texture_view);
-
+    texture_view_array.push(worker_base_triangle_texture_view);
 
     texture_view_array
 }
