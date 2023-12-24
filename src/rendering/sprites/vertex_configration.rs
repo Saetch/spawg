@@ -4,7 +4,7 @@ use crate::rendering::vertex::Vertex;
 
 
 
-pub(crate) const NUM_VERTEX_CONFIGURATIONS: usize = 5;   //UPDATE THIS IF YOU ADD MORE VERTEX CONFIGURATIONS!
+pub(crate) const NUM_VERTEX_CONFIGURATIONS: usize = 6;   //UPDATE THIS IF YOU ADD MORE VERTEX CONFIGURATIONS!
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum VertexConfigration {
@@ -14,6 +14,7 @@ pub(crate) enum VertexConfigration {
     LINE_HORIZONTAL,
     LINE_VERTICAL,
     SMALL_ENTITY_WORKER,
+    BIG_BASE_BASE_4X2,
 
 } 
 
@@ -32,9 +33,16 @@ impl VertexConfigrationTrait for VertexConfigration {
             VertexConfigration::LINE_VERTICAL => SMALL_LINE_VERTICAL_VERTEX_CONF(),
             VertexConfigration::NEARLY_SQUARE_RECTANGLE_0 => SQUARE_0_0_VERTEX_CONF(),
             VertexConfigration::SMALL_ENTITY_WORKER => SMALL_ENTITY_WORKER(),
+            VertexConfigration::BIG_BASE_BASE_4X2 => BIG_BASE_BASE_5X3() ,
             _ => todo!(),
         }
     }
+}
+
+#[allow(non_snake_case)]
+#[inline(always)]
+fn BIG_BASE_BASE_5X3()->  [Vertex; 4]{
+    centered_rectangle(4.0, 2.0)
 }
 
 #[allow(non_snake_case)]      

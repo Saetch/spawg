@@ -158,7 +158,11 @@ fn load_buffer_structs(device: &Device) -> VertexBufferStructs{
         },
         VertexBufferStruct{
             vertex_buffer: create_vertex_buffer_for_config(device,VertexConfigration::SMALL_ENTITY_WORKER),
-            instance_state: create_initial_instance_buffer_struct(device, 1000),
+            instance_state: create_initial_instance_buffer_struct(device, 50),
+        },
+        VertexBufferStruct{
+            vertex_buffer: create_vertex_buffer_for_config(device,VertexConfigration::BIG_BASE_BASE_4X2),
+            instance_state: create_initial_instance_buffer_struct(device, 10),
         },
 
     ]

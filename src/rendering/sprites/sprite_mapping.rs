@@ -11,4 +11,5 @@ pub(crate) enum Sprite {
     DarkBlue,
     Green,
     WorkerBasic,
+    BaseBaseLarge,
 } 

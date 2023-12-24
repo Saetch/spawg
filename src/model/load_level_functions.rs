@@ -5,7 +5,7 @@ use futures::join;
 
 use crate::{game_objects::{buildings::debug_house::DebugHouse, debug::line::Line}, rendering::sprites::{sprite_mapping::Sprite, vertex_configration::VertexConfigration}, controller::position::Position};
 
-use super::{model::Model, maze::maze::Maze, logic_test::logic_test::LogicTest};
+use super::{model::Model, maze::maze::Maze, logic_test::logic_test::LogicTest, strategy_test::{strategy_test::StratLevel, map_chunk::{ChunkInfo, IntEdge}}};
 
 pub(crate) enum Level{
     Initial,
@@ -30,7 +30,20 @@ impl Model{
 
     pub(crate) async fn load_strategy_test(&mut self){
         self.clear_objects().await;
+        let mut level = StratLevel::new(ChunkInfo{
+            bottom_left: IntEdge{
+                x: -100,
+                y: -100,
+            },
+            top_right: IntEdge{
+                x: 100,
+                y: 100,
+            }
+        });
 
+        let game_objects = level.initialize().await;
+        self.add_logic_object(Box::new(level));
+        self.add_game_objects(game_objects).await;
 
     }
 
