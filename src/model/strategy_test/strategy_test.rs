@@ -1,4 +1,4 @@
-use std::{time::Duration, fmt::Debug, sync::{Arc, Weak}};
+use std::{time::Duration, fmt::Debug, sync::{Arc, Weak}, io::Write};
 
 use tokio::sync::RwLock;
 use futures::lock;
@@ -34,6 +34,13 @@ impl StratLevel{
         }
     }
 
+    pub(crate) async fn initialize_initial_units(&mut self){
+        for logic_object in &mut self.logic_objects{
+            let mut lock = logic_object.write().await;
+            lock.initialize_behavior();
+        }
+    }
+
     pub(crate) async fn add_logic_object(&mut self, logic_object: Arc<RwLock<dyn StrategyLogicObject>>){
         logic_object.write().await.set_id(self.logic_objects_id_counter);
         self.logic_objects.push(logic_object);
@@ -49,12 +56,15 @@ impl StratLevel{
         let arxed_base = Arc::new(RwLock::new(start_base));
         self.add_logic_object(arxed_base.clone()).await;
         ret.push(arxed_base.clone());
-
-       for i in 0..6{
+        let dist_from_base = 25.0;
+       for i in 0..120{
             //generate two random values between 0 and 1
-            let x = rand.gen_range(0.0.. 1.0);
-            let y = rand.gen_range(0.0.. 1.0);
-            let worker = Worker::new(Some(arxed_base.clone()), Position::new(i as f32 , y), self.logic_objects_id_counter);
+            let x = rand.gen_range(-5.0..=5.0);
+            let mut y = (dist_from_base - f32::powi(x, 2)).sqrt();
+            if rand.gen_bool(0.5){
+                y *= -1.0;
+            }
+            let worker = Worker::new(Some(arxed_base.clone()), Position::new(x, y), self.logic_objects_id_counter);
             let arxed = Arc::new(RwLock::new(worker));
             ret.push(arxed.clone());
             self.add_logic_object(arxed).await;
@@ -62,7 +72,9 @@ impl StratLevel{
         let worker = Worker::new(Some(arxed_base.clone()), Position::new(0.0, -1.1), self.logic_objects_id_counter);
         let arxed = Arc::new(RwLock::new(worker));
         ret.push(arxed.clone());
-        self.add_logic_object(arxed).await; 
+        self.add_logic_object(arxed).await;
+
+        self.initialize_initial_units().await; 
         ret
     
     }
@@ -94,6 +106,7 @@ impl LogicObject for StratLevel{
 
 pub(crate) trait StrategyLogicObject : Debug{
     fn process_logic(&mut self, delta_time: Duration, blockers: &mut Vec<Box<dyn MapChunk>>, structures: &mut Vec<Box<dyn VisitableStructure>>) -> LogicResult;
+    fn initialize_behavior(&mut self); //this is supposed to be called after the object has been added to the level, possibly needs all necessary chunks for pathfinding
     fn set_id(&mut self, id: u64);
     fn get_id(&self) -> u64;
 }

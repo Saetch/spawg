@@ -12,10 +12,19 @@ pub(crate) struct Worker{
     home: Option< Arc<RwLock<StartObj>>>,
     position: Position,
     id: u64,
+    origin_positiom: Position,
     goal: Option<(f32, f32)>,
     speed: f32,
     next_tile: Option<(f32, f32)>,
     texture: Sprite,
+    state: WorkerState,
+}
+
+#[derive(Debug)]
+pub(crate) enum WorkerState{
+    Idle,
+    Moving,
+    Working,
 }
 
 impl Worker{
@@ -27,10 +36,12 @@ impl Worker{
             home,
             position,
             id,
+            origin_positiom: position,
             goal: None,
             speed: 1.0f32,
             next_tile: None,
             texture : Sprite::WorkerBasic,
+            state: WorkerState::Idle,
         }
     }
 
