@@ -97,18 +97,11 @@ impl StrategyLogicObject for Worker{
     }
 
     fn initialize_behavior(&mut self, blockers: &Vec<Box<dyn super::map_chunk::MapChunk>>, structures: &Vec<Arc<RwLock<dyn VisitableStructure>>>) {
-        println!("My base is {:?}", self.home);
-        println!("Its entrance is {:?}", self.home.as_ref().unwrap().blocking_read().get_entry_point());
-
         self.goal = Some(self.home.as_ref().unwrap().blocking_read().get_entry_point().get_x_y_values());
-        println!("My goal is {:?}", self.goal);
         let start_position = &self.position;
-        println!("My start position is {:?}", start_position);
         self.path = if let Some(path) = start_position.find_path_to(self.goal.as_ref().unwrap(), blockers, structures){ path } else{
             Vec::new()
         };
-        println!("I am a worker but I don't know what to do yet!");
-        println!("My planned path is {:?}", self.path);
     }
 }
 

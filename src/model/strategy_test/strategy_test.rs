@@ -1,10 +1,10 @@
-use std::{time::Duration, fmt::Debug, sync::{Arc, Weak}, io::Write};
+use std::{time::Duration, fmt::Debug, sync::{Arc, Weak}, io::Write, f32::NAN};
 
 use tokio::sync::RwLock;
 use futures::lock;
 use rand::Rng;
 
-use crate::{game_objects::{game_object::{VisitableStructure, LogicObject}, buildings::start_obj::StartObj}, model::results::{LogicResult, GameObjects}, controller::position::{self, Position}};
+use crate::{game_objects::{game_object::{VisitableStructure, LogicObject}, buildings::start_obj::StartObj}, model::results::{LogicResult, GameObjects}, controller::position::{self, Position}, rendering::sprites::sprite_mapping::Sprite};
 
 use super::{map_chunk::{MapChunk, ChunkInfo}, worker::Worker};
 
@@ -51,21 +51,50 @@ impl StratLevel{
         println!("initializing level");
         let mut ret : GameObjects = Vec::new();
         let mut rand = rand::thread_rng();
-
+        let mut other_base = StartObj::new(Position::new(4.0, -2.0), self.logic_objects_id_counter);
+        let mut third_base = StartObj::new(Position::new(-2.0, 2.0), self.logic_objects_id_counter);
         let start_base = StartObj::new(Position::new(0.0, 0.0), self.logic_objects_id_counter);
-
+        let third_base_arxed = Arc::new(RwLock::new(third_base));
+        self.add_logic_object(third_base_arxed.clone()).await;
+        self.structures.push(third_base_arxed.clone());
+        ret.push(third_base_arxed.clone());
+        let other_arxed_base = Arc::new(RwLock::new(other_base));
+        self.add_logic_object(other_arxed_base.clone()).await;
+        self.structures.push(other_arxed_base.clone());
+        ret.push(other_arxed_base.clone());
         let arxed_base = Arc::new(RwLock::new(start_base));
         self.add_logic_object(arxed_base.clone()).await;
         self.structures.push(arxed_base.clone());
         ret.push(arxed_base.clone());
-        let dist_from_base = 25.0;
-       for i in 0..1200{
-            //generate two random values between 0 and 1
-            let x = rand.gen_range(-5.0..=5.0);
+       for i in 0..2000{
+            let dist_from_base: f32 = rand.gen_range(15.0..60.0);
+            let mut x = rand.gen_range(-dist_from_base.sqrt()..=dist_from_base.sqrt());
             let mut y = (dist_from_base - f32::powi(x, 2)).sqrt();
             if rand.gen_bool(0.5){
                 y *= -1.0;
             }
+            loop{
+                let mut eligible = true;
+                for structure in &self.structures{
+                    if structure.read().await.get_blocking_chunk().contains(&Position::new(x, y)){
+                        eligible = false;
+                        break;
+                    }
+                }
+                if eligible{
+                    break;
+                }
+                x = rand.gen_range(-dist_from_base.sqrt()..=dist_from_base.sqrt());
+                y = (dist_from_base - f32::powi(x, 2)).sqrt();
+                if y == NAN || y == -NAN{
+                    println!("Dist: {dist_from_base} x: {x} y: {y}");
+                }
+                if rand.gen_bool(0.5){
+                    y *= -1.0;
+                }
+                //genera
+            }
+
             let worker = Worker::new(Some(arxed_base.clone()), Position::new(x, y), self.logic_objects_id_counter);
             let arxed = Arc::new(RwLock::new(worker));
             ret.push(arxed.clone());
