@@ -1,6 +1,7 @@
-use std::{time::Duration, fmt::Debug, sync::Arc};
+use std::{time::Duration, fmt::Debug, sync::{Arc, Weak}};
 
-use async_std::sync::RwLock;
+use tokio::sync::RwLock;
+use futures::lock;
 use rand::Rng;
 
 use crate::{game_objects::{game_object::{VisitableStructure, LogicObject}, buildings::start_obj::StartObj}, model::results::{LogicResult, GameObjects}, controller::position::{self, Position}};
@@ -44,19 +45,24 @@ impl StratLevel{
         let mut rand = rand::thread_rng();
 
         let start_base = StartObj::new(Position::new(0.0, 0.0), self.logic_objects_id_counter);
-        let arxed = Arc::new(RwLock::new(start_base));
-        ret.push(arxed.clone());
-        self.add_logic_object(arxed).await;
-        
-        for i in 0..6{
+
+        let arxed_base = Arc::new(RwLock::new(start_base));
+        self.add_logic_object(arxed_base.clone()).await;
+        ret.push(arxed_base.clone());
+
+       for i in 0..6{
             //generate two random values between 0 and 1
             let x = rand.gen_range(0.0.. 1.0);
             let y = rand.gen_range(0.0.. 1.0);
-            let worker = Worker::new(None, Position::new(i as f32 , y), self.logic_objects_id_counter);
+            let worker = Worker::new(Some(arxed_base.clone()), Position::new(i as f32 , y), self.logic_objects_id_counter);
             let arxed = Arc::new(RwLock::new(worker));
             ret.push(arxed.clone());
             self.add_logic_object(arxed).await;
         }
+        let worker = Worker::new(Some(arxed_base.clone()), Position::new(0.0, -1.1), self.logic_objects_id_counter);
+        let arxed = Arc::new(RwLock::new(worker));
+        ret.push(arxed.clone());
+        self.add_logic_object(arxed).await; 
         ret
     
     }
@@ -70,7 +76,8 @@ impl LogicObject for StratLevel{
             return LogicResult::None;
         }
         for logic_object in &mut self.logic_objects{
-            logic_object.try_write().unwrap().process_logic(delta_time, &mut self.blocking_chunks, &mut self.structures);
+            let mut lock = logic_object.blocking_write();
+            lock.process_logic(delta_time, &mut self.blocking_chunks, &mut self.structures);
         }
         LogicResult::None
     }

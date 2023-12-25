@@ -6,6 +6,8 @@ pub(crate) struct StartObj{
     pub position: Position,
     pub vertices: VertexConfigration,
     pub wares: Vec<WareAmount>,
+    size: (f32, f32),
+    associated_units: Vec<u64>,
     id : u64,
 }
 
@@ -22,13 +24,28 @@ impl StartObj{
             position,
             vertices: VertexConfigration::BIG_BASE_BASE_4X2,
             wares: Vec::new(),
+            size: (4.2, 2.2),
+            associated_units: Vec::new(),
             id,
         }
     }
+
+    pub(crate) fn get_entry_coords(&self) -> (f32, f32){
+        (self.position.x, self.position.y - self.size.1 / 2.0 )
+    }
+
+    pub(crate) fn add_associated_unit(&mut self, id: u64){
+        self.associated_units.push(id);
+    }
+
+    pub(crate) fn remove_associated_unit(&mut self, id: u64){
+        self.associated_units.retain(|&x| x != id);
+    }
 }
 
+
 impl StrategyLogicObject for StartObj{
-    fn process_logic(&mut self, delta_time: std::time::Duration, _blockers: &mut Vec<Box<dyn MapChunk>>, _structures: &mut Vec<Box<dyn crate::game_objects::game_object::VisitableStructure>>) -> LogicResult {
+    fn process_logic(&mut self, delta_time: std::time::Duration, _blockers: &mut Vec<Box<dyn MapChunk>>, _structures: &mut Vec<Box<dyn crate::game_objects::game_object::VisitableStructure>>) -> LogicResult {        
         LogicResult::None
     }
 

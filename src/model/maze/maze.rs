@@ -1,6 +1,6 @@
-use std::{ time::Duration, cell::{RefCell, Ref, RefMut}, rc::{Rc, Weak}, sync::{ Arc}};
+use std::{ time::Duration, cell::{RefCell, Ref, RefMut}, rc::{Rc, Weak}, sync::{ Arc}, io::Read};
 
-use async_std::sync::RwLock;
+use tokio::sync::RwLock;
 use rand::Rng;
 
 use crate::{game_objects::{game_object::{DrawableObject, LogicObject}, debug::line::Line, buildings::debug_house::DebugHouse}, model::{results::{LogicResult, GameObjects}, strategy_test::worker::Worker}, controller::{controller::Direction, position::Position}, rendering::sprites::{vertex_configration::VertexConfigration, sprite_mapping::Sprite}};
@@ -579,15 +579,11 @@ impl MazeTile{
 
 
     fn get_side_object_id(&self, direction: usize) -> Option<u64>{
-        let dum = self.underlying_objects[direction].as_ref();
-        if dum.is_none(){
-            return None;
+        let objects: [Option<Arc<RwLock<dyn DrawableObject + Send + Sync>>>; 4] = self.underlying_objects.clone();
+        let dum: Option<&Arc<RwLock<dyn DrawableObject + Send + Sync>>> = objects[direction].as_ref();
+        if let Some(obj) = dum{
+            return Some(obj.blocking_read().get_id());
         }
-        let dum = dum.unwrap();
-        loop {
-            if let Some(obj) = dum.try_read(){
-                return Some(obj.get_id());
-            }
-        }
+        return None
     }
 }

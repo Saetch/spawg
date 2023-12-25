@@ -1,6 +1,5 @@
 use std::{sync::{atomic::AtomicBool, Arc, RwLock}, thread, time::{Duration, SystemTime}};
 
-use async_std::task::block_on;
 use controller::{controller::Controller, position::Position, controller_commands::ControllerCommand};
 use flume::Receiver;
 use model::model::Model;
@@ -8,7 +7,7 @@ use rendering::wgpurenderer::RenderChunk;
 use serde::Deserialize;
 use crate::{rendering::wgpurenderer::Renderer, controller::controller::SharablePosition, cam_organizer::cam_organizer::CamOrganizer, };
 
-
+use async_std::task::block_on;
 mod game_objects;
 mod rendering;
 mod model;
@@ -31,7 +30,7 @@ pub async fn main() {
 
 
     //model is not completely Send, which means we cannot send it between threads and thus we need to create the shared states beforehand and create the model in the thread
-    let game_objects = Arc::new(async_std::sync::RwLock::new(Vec::new()));
+    let game_objects = Arc::new(tokio::sync::RwLock::new(Vec::new()));
     let game_objects_clone = game_objects.clone();
     //spawn the model thread
     let model_thread = thread::spawn(move || { 

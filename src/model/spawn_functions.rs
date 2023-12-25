@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use async_std::sync::RwLock;
+use tokio::sync::RwLock;
 
 use crate::{game_objects::{buildings::debug_house::DebugHouse, game_object::DrawableObject}, rendering::sprites::{sprite_mapping::Sprite, vertex_configration::VertexConfigration}, controller::position::Position};
 

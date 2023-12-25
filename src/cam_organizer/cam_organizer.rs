@@ -1,7 +1,7 @@
 
 use std::{sync::{Arc, atomic::AtomicBool}, time::{Duration, Instant}, cell::RefCell, rc::Rc, pin::Pin};
 
-use async_std::{sync::RwLock, future};
+use tokio::{sync::RwLock};
 use bytemuck::{Pod, Zeroable};
 use flume::{Sender, r#async};
 use futures::{join, future::{join_all, BoxFuture}, Future};

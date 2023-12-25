@@ -1,7 +1,8 @@
 use std::{sync::{atomic::{AtomicBool, Ordering}, RwLock}, os::windows::thread, time::Duration, future::Future, ops::Index};
 
 use crate::{game_objects::{game_object::{DrawableObject, LogicObject}, static_object::StaticObject, buildings::debug_house::DebugHouse}, controller::{position::Position, controller_commands::ControllerCommand}, rendering::sprites::{sprite_mapping::Sprite, vertex_configration::VertexConfigration}};
-use async_std::{sync::{Arc, RwLock as AsyncRwLock}, task::block_on};
+use async_std::{sync::{Arc}, task::block_on};
+use tokio::sync::RwLock as AsyncRwLock;
 use flume::{Receiver, r#async};
 
 use super::results::LogicResult;

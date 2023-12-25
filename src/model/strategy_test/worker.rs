@@ -1,11 +1,15 @@
 
+use std::sync::Arc;
+
+use tokio::sync::RwLock;
+
 use crate::{game_objects::{buildings::start_obj::StartObj, game_object::DrawableObject}, rendering::sprites::{sprite_mapping::Sprite, vertex_configration::VertexConfigration}, controller::position::Position, model::results::LogicResult};
 
 use super::strategy_test::StrategyLogicObject;
 
 #[derive(Debug)]
 pub(crate) struct Worker{
-    home: Option< std::sync::Weak<StartObj>>,
+    home: Option< Arc<RwLock<StartObj>>>,
     position: Position,
     id: u64,
     goal: Option<(f32, f32)>,
@@ -15,7 +19,10 @@ pub(crate) struct Worker{
 }
 
 impl Worker{
-    pub(crate) fn new(home: Option<std::sync::Weak<StartObj>>, position: Position, id: u64) -> Self{
+    pub(crate) fn new(home: Option<Arc<RwLock<StartObj>>>, position: Position, id: u64) -> Self{
+        if let Some(home_base) = &home{
+            home_base.blocking_write().add_associated_unit(id);
+        }
         Self{
             home,
             position,
@@ -31,13 +38,21 @@ impl Worker{
 
 impl StrategyLogicObject for Worker{
     fn process_logic(&mut self, delta_time: std::time::Duration, blockers: &mut Vec<Box<dyn super::map_chunk::MapChunk>>, structures: &mut Vec<Box<dyn crate::game_objects::game_object::VisitableStructure>>) -> LogicResult {
-        let id = self.id;
-        println!("Worker position: {:?} with id: {id}", self.position);
         LogicResult::None
     }
 
     fn set_id(&mut self, id: u64) {
+        let old_id = self.id;
         self.id = id;
+
+        if old_id != self.id{
+            if let Some(home_base) = &self.home{
+                let mut lock = home_base.blocking_write();
+                lock.remove_associated_unit(old_id);
+                lock.add_associated_unit(self.id);
+            }
+        }
+
     }
 
     fn get_id(&self) -> u64 {

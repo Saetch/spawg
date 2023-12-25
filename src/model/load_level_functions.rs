@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use async_std::sync::RwLock;
+use tokio::sync::RwLock;
 use futures::join;
 
 use crate::{game_objects::{buildings::debug_house::DebugHouse, debug::line::Line}, rendering::sprites::{sprite_mapping::Sprite, vertex_configration::VertexConfigration}, controller::position::Position};

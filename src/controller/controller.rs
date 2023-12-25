@@ -1,6 +1,6 @@
 use std::ops::Index;
 use std::sync::{Arc};
-use async_std::sync::RwLock;
+use tokio::sync::RwLock;
 use flume::{Receiver, Sender};
 use winit::event::{VirtualKeyCode, ElementState};
 use winit::window::Window;

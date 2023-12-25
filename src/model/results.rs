@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
-use async_std::sync::RwLock;
-
+use tokio::sync::RwLock;
 use crate::game_objects::game_object::{DrawableObject, LogicObject};
 
 use super::model::LogicObjects;
