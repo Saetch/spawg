@@ -14,7 +14,7 @@ use super::{map_chunk::{MapChunk, ChunkInfo}, worker::Worker};
 pub struct StratLevel{
     pub(crate) blocking_chunks: Vec<Box<dyn MapChunk>>,
     pub(crate) non_blocking_chunks: Vec<Box<dyn MapChunk>>,
-    pub(crate) structures: Vec<Box<dyn VisitableStructure>>,
+    pub(crate) structures: Vec<Arc<RwLock<dyn VisitableStructure>>>,
     pub(crate) logic_objects: Vec<Arc<RwLock<dyn StrategyLogicObject>>>,
     pub(crate) logic_objects_id_counter: u64,
     pub(crate) borders: ChunkInfo,
@@ -37,7 +37,7 @@ impl StratLevel{
     pub(crate) async fn initialize_initial_units(&mut self){
         for logic_object in &mut self.logic_objects{
             let mut lock = logic_object.write().await;
-            lock.initialize_behavior();
+            lock.initialize_behavior(&self.blocking_chunks, &self.structures);
         }
     }
 
@@ -48,6 +48,7 @@ impl StratLevel{
     }
 
     pub(crate) async fn initialize(&mut self) -> GameObjects{
+        println!("initializing level");
         let mut ret : GameObjects = Vec::new();
         let mut rand = rand::thread_rng();
 
@@ -55,9 +56,10 @@ impl StratLevel{
 
         let arxed_base = Arc::new(RwLock::new(start_base));
         self.add_logic_object(arxed_base.clone()).await;
+        self.structures.push(arxed_base.clone());
         ret.push(arxed_base.clone());
         let dist_from_base = 25.0;
-       for i in 0..120{
+       for i in 0..1200{
             //generate two random values between 0 and 1
             let x = rand.gen_range(-5.0..=5.0);
             let mut y = (dist_from_base - f32::powi(x, 2)).sqrt();
@@ -69,12 +71,13 @@ impl StratLevel{
             ret.push(arxed.clone());
             self.add_logic_object(arxed).await;
         }
-        let worker = Worker::new(Some(arxed_base.clone()), Position::new(0.0, -1.1), self.logic_objects_id_counter);
+        let worker = Worker::new(Some(arxed_base.clone()), Position::new(0.98684025, 4.901647), self.logic_objects_id_counter);
         let arxed = Arc::new(RwLock::new(worker));
         ret.push(arxed.clone());
         self.add_logic_object(arxed).await;
 
         self.initialize_initial_units().await; 
+        println!("finished initializing level");
         ret
     
     }
@@ -105,8 +108,8 @@ impl LogicObject for StratLevel{
 }
 
 pub(crate) trait StrategyLogicObject : Debug{
-    fn process_logic(&mut self, delta_time: Duration, blockers: &mut Vec<Box<dyn MapChunk>>, structures: &mut Vec<Box<dyn VisitableStructure>>) -> LogicResult;
-    fn initialize_behavior(&mut self); //this is supposed to be called after the object has been added to the level, possibly needs all necessary chunks for pathfinding
+    fn process_logic(&mut self, delta_time: Duration, blockers: &mut Vec<Box<dyn MapChunk>>, structures: &mut Vec<Arc<RwLock<dyn VisitableStructure>>>) -> LogicResult;
+    fn initialize_behavior(&mut self, blockers: &Vec<Box<dyn MapChunk>>, structures: &Vec<Arc<RwLock<dyn VisitableStructure>>>); //this is supposed to be called after the object has been added to the level, possibly needs all necessary chunks for pathfinding
     fn set_id(&mut self, id: u64);
     fn get_id(&self) -> u64;
 }

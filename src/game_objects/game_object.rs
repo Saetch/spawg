@@ -23,8 +23,9 @@ pub(crate) trait DrawableObject: Debug + Send + Sync {
     fn set_id(&mut self, id: u64);
 }
 
-pub (crate) trait VisitableStructure: Debug + Send + Sync + MapChunk{
-    fn get_entry_point(&self) -> ChunkInfo;
+pub (crate) trait VisitableStructure: Debug + Send + Sync {
+    fn get_entry_point(&self) -> Position;
+    fn get_blocking_chunk(&self) -> ChunkInfo;
 }
 
 

@@ -1,4 +1,8 @@
-use crate::{rendering::sprites::{sprite_mapping::Sprite, vertex_configration::VertexConfigration}, controller::position::Position, game_objects::game_object::DrawableObject, model::{results::LogicResult, strategy_test::{strategy_test::StrategyLogicObject, map_chunk::MapChunk}}};
+use std::sync::Arc;
+
+use tokio::sync::RwLock;
+
+use crate::{rendering::sprites::{sprite_mapping::Sprite, vertex_configration::VertexConfigration}, controller::position::Position, game_objects::game_object::{DrawableObject, VisitableStructure}, model::{results::LogicResult, strategy_test::{strategy_test::StrategyLogicObject, map_chunk::{MapChunk, ChunkInfo}}}};
 
 #[derive(Debug)]
 pub(crate) struct StartObj{
@@ -43,9 +47,19 @@ impl StartObj{
     }
 }
 
+impl VisitableStructure for StartObj{
+    fn get_entry_point(&self) -> Position {
+        Position::new(self.position.x, self.position.y - self.size.1 / 2.0)
+    }
+
+    fn get_blocking_chunk(&self) -> ChunkInfo {
+        ChunkInfo::new(self.position.x, self.position.y, self.size.0, self.size.1)
+    }
+}
+
 
 impl StrategyLogicObject for StartObj{
-    fn process_logic(&mut self, delta_time: std::time::Duration, _blockers: &mut Vec<Box<dyn MapChunk>>, _structures: &mut Vec<Box<dyn crate::game_objects::game_object::VisitableStructure>>) -> LogicResult {        
+    fn process_logic(&mut self, delta_time: std::time::Duration, _blockers: &mut Vec<Box<dyn MapChunk>>, _structures: &mut Vec<Arc<RwLock<dyn VisitableStructure>>>) -> LogicResult {        
         LogicResult::None
     }
 
@@ -56,6 +70,10 @@ impl StrategyLogicObject for StartObj{
 
     fn get_id(&self) -> u64 {
         self.id
+    }
+
+    fn initialize_behavior(&mut self, blockers: &Vec<Box<dyn MapChunk>>, structures: &Vec<Arc<tokio::sync::RwLock<dyn VisitableStructure>>>) {
+        println!("I don't know what to do yet!");
     }
 
 }

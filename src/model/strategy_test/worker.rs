@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use crate::{game_objects::{buildings::start_obj::StartObj, game_object::DrawableObject}, rendering::sprites::{sprite_mapping::Sprite, vertex_configration::VertexConfigration}, controller::position::Position, model::results::LogicResult};
+use crate::{game_objects::{buildings::start_obj::StartObj, game_object::{DrawableObject, VisitableStructure}}, rendering::sprites::{sprite_mapping::Sprite, vertex_configration::VertexConfigration}, controller::position::Position, model::results::LogicResult};
 
 use super::strategy_test::StrategyLogicObject;
 
@@ -16,6 +16,7 @@ pub(crate) struct Worker{
     goal: Option<(f32, f32)>,
     speed: f32,
     next_tile: Option<(f32, f32)>,
+    path: Vec<(f32, f32)>,
     texture: Sprite,
     state: WorkerState,
 }
@@ -38,8 +39,9 @@ impl Worker{
             id,
             origin_positiom: position,
             goal: None,
-            speed: 1.0f32,
+            speed: 0.5f32,
             next_tile: None,
+            path: Vec::new(),
             texture : Sprite::WorkerBasic,
             state: WorkerState::Idle,
         }
@@ -48,7 +50,31 @@ impl Worker{
 }
 
 impl StrategyLogicObject for Worker{
-    fn process_logic(&mut self, delta_time: std::time::Duration, blockers: &mut Vec<Box<dyn super::map_chunk::MapChunk>>, structures: &mut Vec<Box<dyn crate::game_objects::game_object::VisitableStructure>>) -> LogicResult {
+    fn process_logic(&mut self, delta_time: std::time::Duration, blockers: &mut Vec<Box<dyn super::map_chunk::MapChunk>>, structures: &mut Vec<Arc<RwLock<dyn VisitableStructure>>>) -> LogicResult {
+        let mut covered_distance = self.speed * delta_time.as_secs_f32();
+        if self.path.len() == 0{
+            return LogicResult::None;
+        }
+        let dist =self.position.distance(&self.path[0]);
+        if  dist >= covered_distance{
+            let direction = self.position.direction_to(&self.path[0]);
+            self.position.x += direction.0 * covered_distance;
+            self.position.y += direction.1 * covered_distance;
+        }
+        else{
+            covered_distance -= dist;
+            self.position = Position::new(self.path[0].0, self.path[0].1);
+            self.path.remove(0);
+            if self.path.len() == 0{
+                self.state = WorkerState::Idle;
+                println!("I am a worker and I am done! My id is: {} and I came from {:?}", self.id, self.origin_positiom);
+            }
+            else{
+                let direction = self.position.direction_to(&self.path[0]);
+                self.position.x += direction.0 * covered_distance;
+                self.position.y += direction.1 * covered_distance;
+            }
+        }
         LogicResult::None
     }
 
@@ -68,6 +94,21 @@ impl StrategyLogicObject for Worker{
 
     fn get_id(&self) -> u64 {
         self.id
+    }
+
+    fn initialize_behavior(&mut self, blockers: &Vec<Box<dyn super::map_chunk::MapChunk>>, structures: &Vec<Arc<RwLock<dyn VisitableStructure>>>) {
+        println!("My base is {:?}", self.home);
+        println!("Its entrance is {:?}", self.home.as_ref().unwrap().blocking_read().get_entry_point());
+
+        self.goal = Some(self.home.as_ref().unwrap().blocking_read().get_entry_point().get_x_y_values());
+        println!("My goal is {:?}", self.goal);
+        let start_position = &self.position;
+        println!("My start position is {:?}", start_position);
+        self.path = if let Some(path) = start_position.find_path_to(self.goal.as_ref().unwrap(), blockers, structures){ path } else{
+            Vec::new()
+        };
+        println!("I am a worker but I don't know what to do yet!");
+        println!("My planned path is {:?}", self.path);
     }
 }
 
