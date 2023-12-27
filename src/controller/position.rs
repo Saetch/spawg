@@ -1,4 +1,4 @@
-use std::sync::{Arc};
+use std::{sync::{Arc}, collections::HashMap};
 
 
 use tokio::sync::RwLock;
@@ -14,6 +14,16 @@ pub struct Position {
 pub struct PathTrack{
     pub path: Vec<(f32, f32)>,
     pub previously_visited: Vec<(f32, f32)>,
+}
+
+struct PathBuildingInformation{
+    optimal_path_length: f32,
+    optimal_path: Vec<(f32, f32)>,
+}
+
+struct PathHelper{
+    map: HashMap<(f32, f32), PathBuildingInformation>,
+    current_best: Option<(f32, f32)>,
 }
 pub struct IntPosition{
     pub x: i32,
@@ -72,6 +82,8 @@ pub fn find_all_neighbors(tile: &(f32, f32)) -> Vec<(f32, f32)>{
     ret
 }
 
+
+
 fn find_smallest_dist(start: &(f32, f32), neighbors: &Vec<(f32, f32)>) -> (f32, f32){
     let mut ret = neighbors[0];
     let mut smallest_dist = direct_distance_between(start, &ret);
@@ -85,6 +97,7 @@ fn find_smallest_dist(start: &(f32, f32), neighbors: &Vec<(f32, f32)>) -> (f32, 
     ret
 }
 
+#[allow(unused)]
 impl Position {
     pub fn new(x: f32, y: f32) -> Self {
         Position {
@@ -142,6 +155,14 @@ impl Position {
         }
 
         ret
+                
+    }
+
+    pub fn find_optimal_path_to(&self, other: &(f32, f32), blockers: &Vec<Box<dyn MapChunk>>, structures: &Vec<Arc<RwLock<dyn VisitableStructure>>>) -> Option<Vec<(f32, f32)>>{
+        let mut helper: PathHelper = PathHelper{
+            map: HashMap::new(),
+            current_best: None,
+        };
                 
     }
 

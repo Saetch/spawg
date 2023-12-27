@@ -51,8 +51,8 @@ impl StratLevel{
         println!("initializing level");
         let mut ret : GameObjects = Vec::new();
         let mut rand = rand::thread_rng();
-        let mut other_base = StartObj::new(Position::new(4.0, -2.0), self.logic_objects_id_counter);
-        let mut third_base = StartObj::new(Position::new(-2.0, 2.0), self.logic_objects_id_counter);
+        let other_base = StartObj::new(Position::new(4.0, -2.0), self.logic_objects_id_counter);
+        let third_base = StartObj::new(Position::new(-2.0, 2.0), self.logic_objects_id_counter);
         let start_base = StartObj::new(Position::new(0.0, 0.0), self.logic_objects_id_counter);
         let third_base_arxed = Arc::new(RwLock::new(third_base));
         self.add_logic_object(third_base_arxed.clone()).await;
@@ -78,7 +78,6 @@ impl StratLevel{
                 for structure in &self.structures{
                     if structure.read().await.get_blocking_chunk().contains(&Position::new(x, y)){
                         eligible = false;
-                        break;
                     }
                 }
                 if eligible{
@@ -100,11 +99,11 @@ impl StratLevel{
             ret.push(arxed.clone());
             self.add_logic_object(arxed).await;
         }
-        let worker = Worker::new(Some(arxed_base.clone()), Position::new(0.98684025, 4.901647), self.logic_objects_id_counter);
+    /*    let worker = Worker::new(Some(arxed_base.clone()), Position::new(0.98684025, 4.901647), self.logic_objects_id_counter);
         let arxed = Arc::new(RwLock::new(worker));
         ret.push(arxed.clone());
         self.add_logic_object(arxed).await;
-
+        */
         self.initialize_initial_units().await; 
         println!("finished initializing level");
         ret

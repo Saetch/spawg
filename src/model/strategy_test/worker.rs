@@ -33,6 +33,7 @@ impl Worker{
         if let Some(home_base) = &home{
             home_base.blocking_write().add_associated_unit(id);
         }
+        println!("I got created with id {}", id);
         Self{
             home,
             position,
@@ -111,7 +112,6 @@ impl DrawableObject for Worker{
     }
 
     fn get_x_y_values(&self) -> (f32, f32) {
-        println!("Worker position: {:?}", self.position);
         (self.position.x, self.position.y)
     }
 

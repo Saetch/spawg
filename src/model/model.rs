@@ -68,12 +68,16 @@ impl Model{
         let mut loop_helper = spin_sleep::LoopHelper::builder()
         .report_interval_s(0.5) // report every half a second
         .build_with_target_rate(60.0);
+        let mut loop_reset_bool = false;
         while self.running{
 
             while let Ok(command) = self.controller_receiver.try_recv(){
-                self.process_controller_command(command).await;
+                loop_reset_bool = self.process_controller_command(command).await;
             }
-
+            if loop_reset_bool{
+                loop_reset_bool = false;
+                loop_helper.loop_start();
+            }
             //do stuff
             self.update(loop_helper.loop_start()).await;    //what this does is that it calls whatever function we have stored in logic_function. This means that we can easily change what the model is supposed to do.
 
@@ -91,7 +95,7 @@ impl Model{
 
     #[inline(always)]
      async fn update(&mut self, delta_time: Duration){
-        //in the maze, only logic objects actually do something, so there is no need to call anything else than compute_logic_objects
+        //only logic objects actually do something, so there is no need to call anything else than compute_logic_objects
         self.compute_logic_objects(delta_time).await;
     }
 
@@ -160,14 +164,15 @@ impl Model{
     }
 
 
-    async fn process_controller_command(&mut self, command: ControllerCommand){
+    async fn process_controller_command(&mut self, command: ControllerCommand) -> bool{
         match command{
             ControllerCommand::SpawnHouseAtPosition { spawn_position } => {
                      self.spawn_house_at_position(spawn_position).await;
+                     false
                 }
-            ControllerCommand::SpawnHouseAtPositionPixelated { spawn_position: _ } => {},
-            ControllerCommand::LoadLevel(level) => self.load_level(level).await,
-            ControllerCommand::Shutdown => self.running = false,
+            ControllerCommand::SpawnHouseAtPositionPixelated { spawn_position: _ } => {false},
+            ControllerCommand::LoadLevel(level) => {self.load_level(level).await; true },
+            ControllerCommand::Shutdown => {self.running = false; false },
          }
     }
 

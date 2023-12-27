@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use tokio::sync::RwLock;
 use futures::join;
@@ -29,6 +29,8 @@ impl Model{
     }
 
     pub(crate) async fn load_strategy_test(&mut self){
+        async_std::task::sleep(Duration::from_millis(500)).await;
+
         self.clear_objects().await;
         let mut level = StratLevel::new(ChunkInfo{
             bottom_left: IntEdge{
@@ -40,7 +42,6 @@ impl Model{
                 y: 100,
             }
         });
-
         let game_objects = level.initialize().await;
         self.add_logic_object(Box::new(level));
         self.add_game_objects(game_objects).await;
@@ -51,7 +52,6 @@ impl Model{
 
 
        self.clear_objects().await;
-        
         //create a Maze
         let (maze, to_add_objects ) = Maze::new(43, 24, (-10.0, -5.0));
         let background_square = DebugHouse::new(Sprite::DarkBlue, Position { x: 1241.2, y: 1231.1 }, VertexConfigration::NEARLY_SQUARE_RECTANGLE_0);
