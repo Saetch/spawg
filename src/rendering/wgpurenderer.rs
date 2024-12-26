@@ -226,7 +226,7 @@ impl Renderer {
             self.queue.write_buffer(&self.vertex_structs[id].instance_state.instance_buffer, 0, bytemuck::cast_slice(&instances_buffer));
             return None;
         }
-        let new_size = len as u32 + 300;
+        let new_size = len as u32 + 1300;
         *size = new_size;
         let buf = self.device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Instance Buffer"),

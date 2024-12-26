@@ -163,7 +163,7 @@ impl Position {
             map: HashMap::new(),
             current_best: None,
         };
-                
+        todo!()
     }
 
     pub fn find_path_to_position(&self, other: &Position, blockers: &Vec<Box<dyn MapChunk>>, structures: &Vec<Arc<RwLock<dyn VisitableStructure>>>) -> Option<Vec<(f32, f32)>>{

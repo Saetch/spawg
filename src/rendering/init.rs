@@ -146,7 +146,7 @@ fn load_buffer_structs(device: &Device) -> VertexBufferStructs{
         },
         VertexBufferStruct{
             vertex_buffer: create_vertex_buffer_for_config(device, VertexConfigration::NEARLY_SQUARE_RECTANGLE_0),
-            instance_state: create_initial_instance_buffer_struct(device, 10),
+            instance_state: create_initial_instance_buffer_struct(device, 1500),
         },
         VertexBufferStruct{
             vertex_buffer: create_vertex_buffer_for_config(device,VertexConfigration::LINE_HORIZONTAL),
